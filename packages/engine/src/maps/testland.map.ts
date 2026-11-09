@@ -4,6 +4,7 @@ import type { MapDefinition } from "../map/types.js";
 export const testland: MapDefinition = {
   id: "testland",
   name: "Testland",
+  seaRoutes: [],
   continents: [
     { id: "nordreich", name: "Nordreich", bonus: 2 },
     { id: "suedmark", name: "Südmark", bonus: 3 },

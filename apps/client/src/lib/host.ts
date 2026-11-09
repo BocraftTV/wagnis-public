@@ -78,6 +78,7 @@ export const settingsMessage = (patch: {
   missionDraft?: boolean;
   holdToWin?: boolean;
   roundLimit?: 8 | 12 | 16 | null;
+  worldEvents?: boolean;
 }): ClientMessage => ({ type: "settings", ...patch });
 
 /** "Annas", "Max'" (names ending in s, ß, x or z take only the apostrophe). */

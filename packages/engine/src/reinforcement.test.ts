@@ -6,6 +6,7 @@ import type { MapDefinition, TerritoryState } from "./index.js";
 const chain: MapDefinition = {
   id: "chain",
   name: "Chain",
+  seaRoutes: [],
   continents: [
     { id: "solo", name: "Solo", bonus: 2 },
     { id: "rest", name: "Rest", bonus: 100 },

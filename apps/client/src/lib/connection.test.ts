@@ -76,6 +76,7 @@ const snapshot = (version: number) => ({
     missionDraft: false,
     holdToWin: false,
     roundLimit: null,
+    worldEvents: false,
     gameNo: 1,
     publicUrl: null,
     game: null,

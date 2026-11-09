@@ -10,6 +10,7 @@ export {
   defaultFortifyMoves,
   defaultFortifyReach,
   defaultRoundLimit,
+  defaultWorldEvents,
 } from "./rules/defaults.js";
 export { cardCatalog, findSuggestedSets, mustTrade, tradeValue } from "./cards.js";
 export { createDiceRng, createSeededRng } from "./rng.js";
@@ -27,6 +28,7 @@ export type {
   GameStateV5,
   GameStateV6,
   GameStateV7,
+  GameStateV8,
 } from "./normalize.js";
 export {
   migrateState,
@@ -35,6 +37,7 @@ export {
   migrate5to6,
   migrate6to7,
   migrate7to8,
+  migrate8to9,
 } from "./migrate.js";
 export type { MigrateResult } from "./migrate.js";
 export { STATE_VERSION } from "./state-version.js";
@@ -45,3 +48,4 @@ export { validateMissions } from "./missions-validate.js";
 export type { MissionsValidation } from "./missions-validate.js";
 export { checkLastPlayer, checkVictory } from "./victory.js";
 export { scoreboard, scoreWinners } from "./scoring.js";
+export { WORLD_EVENT_KINDS, MOBILIZE_BONUS } from "./world-events.js";

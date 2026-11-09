@@ -493,8 +493,8 @@ describe("after the first move (setting 2) the view lists an origin with maxMove
     const f = view.fortify!;
     const origins =
       f.reach === "connected"
-        ? f.groups.flat().filter((id) => view.territories[id]!.maxMove >= 1)
-        : Object.keys(f.targets).filter((id) => view.territories[id]!.maxMove >= 1);
+        ? f.groups.flat().filter((id) => (view.territories[id]!.maxMove ?? 0) >= 1)
+        : Object.keys(f.targets).filter((id) => (view.territories[id]!.maxMove ?? 0) >= 1);
     expect(origins.length).toBeGreaterThan(0);
     if (f.reach === "adjacent") expect(f.targets["rabenhain"]).toContain("eisenfurt");
   });

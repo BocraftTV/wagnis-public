@@ -5,6 +5,7 @@ import {
   defaultFortifyReach,
   defaultHoldToWin,
   defaultRoundLimit,
+  defaultWorldEvents,
   defaultMissionDraft,
 } from "./defaults.js";
 
@@ -22,6 +23,7 @@ export const weltRules: RuleConfig = {
   missionDraft: defaultMissionDraft,
   holdToWin: defaultHoldToWin,
   roundLimit: defaultRoundLimit,
+  worldEvents: defaultWorldEvents,
   cards: defaultCardRules,
   victoryMode: "missions",
 };

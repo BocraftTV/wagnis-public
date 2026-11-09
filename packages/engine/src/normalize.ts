@@ -22,6 +22,7 @@ type LegacyRules = Omit<
   | "missionDraft"
   | "holdToWin"
   | "roundLimit"
+  | "worldEvents"
 > & {
   fortifyReach?: RuleConfig["fortifyReach"];
   cards?: Partial<Omit<CardRules, "tradeValues">> & {
@@ -45,13 +46,15 @@ export type GameStateV3 = Omit<
   | "conquestsThisTurn"
   | "round"
   | "winnerIds"
+  | "worldEvent"
 > & {
   rules: Omit<
     RuleConfig,
-    "victoryMode" | "fortifyMoves" | "missionDraft" | "holdToWin" | "roundLimit"
+    "victoryMode" | "fortifyMoves" | "missionDraft" | "holdToWin" | "roundLimit" | "worldEvents"
   >;
   secret: Omit<
     SecretState,
+    | "eventDeck"
     | "mission"
     | "originalMission"
     | "missionReplaced"
@@ -64,9 +67,16 @@ export type GameStateV3 = Omit<
   };
 };
 
+/** The state format of plan 014 A (version 8): everything of version 9 except `rules.worldEvents`, `worldEvent` and `secret.eventDeck` (plan 014 B). */
+export type GameStateV8 = Omit<GameState, "worldEvent" | "rules" | "secret" | "stateVersion"> & {
+  rules: Omit<RuleConfig, "worldEvents">;
+  secret: Omit<SecretState, "eventDeck">;
+  stateVersion: 8;
+};
+
 /** The state format of plan 013 (version 7): everything of version 8 except `round`, `winnerIds` and `rules.roundLimit` (plan 014 A). */
-export type GameStateV7 = Omit<GameState, "round" | "winnerIds" | "rules" | "stateVersion"> & {
-  rules: Omit<RuleConfig, "roundLimit">;
+export type GameStateV7 = Omit<GameStateV8, "round" | "winnerIds" | "rules" | "stateVersion"> & {
+  rules: Omit<GameStateV8["rules"], "roundLimit">;
   stateVersion: 7;
 };
 
@@ -78,9 +88,9 @@ export type GameStateV6 = Omit<
   GameStateV7,
   "conquestsThisTurn" | "rules" | "secret" | "stateVersion"
 > & {
-  rules: Omit<RuleConfig, "missionDraft" | "holdToWin" | "roundLimit">;
+  rules: Omit<GameStateV7["rules"], "missionDraft" | "holdToWin">;
   secret: Omit<
-    SecretState,
+    GameStateV7["secret"],
     "missionOffer" | "missionOfferDealt" | "discardedMission" | "victoryPending"
   >;
   stateVersion: 6;

@@ -27,7 +27,10 @@ export function fortifyOrigins(
   return listed.filter((id) => {
     const t = territories[id];
     return (
-      t !== undefined && t.ownerId === me && t.maxMove > 0 && fortifyTargets(fortify, id).length > 0
+      t !== undefined &&
+      t.ownerId === me &&
+      (t.maxMove ?? 0) > 0 &&
+      fortifyTargets(fortify, id).length > 0
     );
   });
 }

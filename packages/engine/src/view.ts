@@ -169,12 +169,25 @@ function secretFor(state: GameState, playerId: PlayerId): SecretView {
 export function viewFor(state: GameState, playerId: PlayerId): GameView {
   const pending = state.pendingOccupation;
   const map = getMap(state.mapId);
+  // Fog (plan 014 B, rules.md 12): armies of foreign and neutral territories are secret fields for the round, and so is
+  // everything derived from them. The open move-in of another player shows `max` (the armies behind it), so it goes too.
+  const fog = state.worldEvent?.kind === "fog";
+  const hidden = (ownerId: string | null): boolean => fog && ownerId !== playerId;
   return {
     mapId: state.mapId,
     phase: state.phase,
     turn: state.turn,
     round: state.round,
     roundLimit: state.rules.roundLimit,
+    worldEvent: state.worldEvent
+      ? {
+          kind: state.worldEvent.kind,
+          continentId: state.worldEvent.continentId,
+          playerIds: [...state.worldEvent.playerIds],
+          territoryIds: [...state.worldEvent.territoryIds],
+        }
+      : null,
+    worldEventsLeft: state.secret.eventDeck.length,
     activePlayerId: state.activePlayerId,
     playerOrder: [...state.playerOrder],
     removedPlayerIds: [...state.removedPlayerIds],
@@ -182,22 +195,25 @@ export function viewFor(state: GameState, playerId: PlayerId): GameView {
     territories: Object.fromEntries(
       Object.entries(state.territories).map(([id, t]) => [
         id,
-        {
-          ownerId: t.ownerId,
-          armies: t.armies,
-          maxAttackDice: maxAttackDice(t.armies),
-          maxMove: Math.max(0, t.armies - 1),
-        },
+        hidden(t.ownerId)
+          ? { ownerId: t.ownerId, armies: null, maxAttackDice: null, maxMove: null }
+          : {
+              ownerId: t.ownerId,
+              armies: t.armies,
+              maxAttackDice: maxAttackDice(t.armies),
+              maxMove: Math.max(0, t.armies - 1),
+            },
       ]),
     ),
-    pendingOccupation: pending
-      ? {
-          from: pending.from,
-          to: pending.to,
-          min: pending.min,
-          max: pending.min + Math.max(0, (state.territories[pending.from]?.armies ?? 1) - 1),
-        }
-      : null,
+    pendingOccupation:
+      pending && !(fog && playerId !== state.activePlayerId)
+        ? {
+            from: pending.from,
+            to: pending.to,
+            min: pending.min,
+            max: pending.min + Math.max(0, (state.territories[pending.from]?.armies ?? 1) - 1),
+          }
+        : null,
     conqueredThisTurn: state.conqueredThisTurn,
     conquestsThisTurn: state.conquestsThisTurn,
     victoryPending: state.playerOrder.some(

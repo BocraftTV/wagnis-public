@@ -74,6 +74,26 @@ export const tradeRecordSchema = z.object({
 /** Round limit of the room (plan 014 A, rules.md 11): `null` is off, otherwise 8, 12 or 16 rounds. */
 export const roundLimitSchema = z.union([z.literal(8), z.literal(12), z.literal(16), z.null()]);
 
+/** World event kinds (plan 014 B, rules.md 12). */
+export const worldEventKindSchema = z.enum([
+  "storm",
+  "goldRush",
+  "plague",
+  "mobilize",
+  "truce",
+  "rebellion",
+  "cardFlood",
+  "fog",
+]);
+
+/** The event of the current round: public. Fields the kind has no use for are `null` / empty. */
+export const worldEventSchema = z.object({
+  kind: worldEventKindSchema,
+  continentId: z.string().nullable(),
+  playerIds: z.array(z.string()),
+  territoryIds: z.array(z.string()),
+});
+
 /** One line of the score after the round limit (rules.md 11.2). */
 const scoreEntrySchema = z.object({
   playerId: z.string(),
@@ -111,6 +131,9 @@ export const gameViewSchema = z.object({
   /** 1-based round (rules.md 11.1) and the room's limit, or null. */
   round: z.number().int().min(1),
   roundLimit: roundLimitSchema,
+  /** Plan 014 B: the event of this round, or null; and the cards left in the (secret) event deck. */
+  worldEvent: worldEventSchema.nullable(),
+  worldEventsLeft: z.number().int().nonnegative(),
   activePlayerId: z.string(),
   playerOrder: z.array(z.string()),
   /** Players the host removed (rules.md 1.6); public. */
@@ -121,9 +144,10 @@ export const gameViewSchema = z.object({
     z.object({
       /** `null`: neutral owner (rules.md 1.3). */
       ownerId: z.string().nullable(),
-      armies: z.number().int(),
-      maxAttackDice: z.number().int(),
-      maxMove: z.number().int(),
+      /** `null` for foreign and neutral territories during the fog event (rules.md 12). */
+      armies: z.number().int().nullable(),
+      maxAttackDice: z.number().int().nullable(),
+      maxMove: z.number().int().nullable(),
     }),
   ),
   pendingOccupation: z
@@ -213,6 +237,8 @@ export const roomViewSchema = z.object({
   holdToWin: z.boolean(),
   /** Plan 014 A: the round limit; the lobby choice, once the game runs the value in the game state (public). */
   roundLimit: roundLimitSchema,
+  /** Plan 014 B: world events on or off; the lobby choice, once the game runs the value in the game state (public). */
+  worldEvents: z.boolean(),
   /** Number of the game in this room, from 1; rises with every "back to the lobby" (public). */
   gameNo: z.number().int().min(1),
   /**

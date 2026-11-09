@@ -2,6 +2,7 @@ import { resolveRoll, rollDice } from "./combat.js";
 import { getMap } from "./maps/index.js";
 import { replaceTargetMissions } from "./missions.js";
 import { isEliminated } from "./players.js";
+import { eventOf, isSeaRoute } from "./world-events.js";
 import { MAX_COMBAT_ROLLS } from "./types.js";
 import type {
   Action,
@@ -51,6 +52,11 @@ function checkTarget(
   if (!map.territories.find((t) => t.id === fromId)?.neighbors.includes(toId)) {
     return "NOT_ADJACENT";
   }
+  // World events of the round (plan 014 B): storm closes the sea routes, truce protects one continent.
+  if (eventOf(state, "storm") && isSeaRoute(map, fromId, toId)) return "SEA_BLOCKED";
+  const truce = eventOf(state, "truce");
+  if (truce && map.territories.find((t) => t.id === toId)?.continentId === truce.continentId)
+    return "TRUCE";
   if (from.armies < 2) return "NOT_ENOUGH_ARMIES";
   return null;
 }

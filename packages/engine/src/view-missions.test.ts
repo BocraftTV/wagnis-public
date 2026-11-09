@@ -300,6 +300,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "winReason",
         "winnerId",
         "winnerIds",
+        "worldEvent",
       ].sort(),
     );
   });
@@ -307,6 +308,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
     expect(Object.keys(state.secret).sort()).toEqual(
       [
         "deck",
+        "eventDeck",
         "discard",
         "discardedMission",
         "hand",
@@ -351,6 +353,8 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "winReason",
         "winnerId",
         "winnerIds",
+        "worldEvent",
+        "worldEventsLeft",
       ].sort(),
     );
     expect(Object.keys(v.secret).sort()).toEqual([

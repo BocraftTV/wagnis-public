@@ -3,6 +3,7 @@ import { getMap } from "./maps/index.js";
 import { isEliminated } from "./players.js";
 import { calculateReinforcements } from "./reinforcement.js";
 import { checkTurnStart, finishByRoundLimit, markVictoryPending } from "./victory.js";
+import { drawWorldEvent, eventOf } from "./world-events.js";
 import type { ActionResult, GameEvent, GameState, PlayerId, Rng } from "./types.js";
 
 /** Next player in seat order who has not been eliminated. */
@@ -27,9 +28,17 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
   if (!map) return { ok: false, code: "UNKNOWN_MAP" };
   // End of the turn: with `holdToWin` a met mission sets the marker (plan 013).
   state = markVictoryPending(state);
-  const drawn = state.conqueredThisTurn
-    ? drawCard(state, state.activePlayerId, rng)
-    : { state, events: [] };
+  // Card flood (plan 014 B): one card per conquest instead of at most one.
+  const cards = eventOf(state, "cardFlood")
+    ? state.conquestsThisTurn
+    : state.conqueredThisTurn
+      ? 1
+      : 0;
+  let drawn: { state: GameState; events: GameEvent[] } = { state, events: [] };
+  for (let i = 0; i < cards; i++) {
+    const one = drawCard(drawn.state, state.activePlayerId, rng);
+    drawn = { state: one.state, events: [...drawn.events, ...one.events] };
+  }
   const after = drawn.state;
   const allEvents = [...events, ...drawn.events];
   const nextId = nextPlayer(after);
@@ -42,10 +51,19 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
     return { ok: true, ...finishByRoundLimit(after, allEvents) };
   }
   const round = wraps ? after.round + 1 : after.round;
-  const reinforcements = calculateReinforcements(map, after.rules, after.territories, nextId);
+  // The event of the new round is drawn before the reinforcements, so it counts for the first player too.
+  const event = wraps ? drawWorldEvent(after, rng) : { state: after, events: [] };
+  const base = event.state;
+  const reinforcements = calculateReinforcements(
+    map,
+    base.rules,
+    base.territories,
+    nextId,
+    base.worldEvent,
+  );
   const turn = after.turn + 1;
   const next: GameState = {
-    ...after,
+    ...base,
     activePlayerId: nextId,
     phase: "reinforce",
     turn,
@@ -63,6 +81,7 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
     ...checkTurnStart(next, [
       ...allEvents,
       ...(wraps ? [{ type: "roundStarted" as const, round }] : []),
+      ...event.events,
       { type: "phaseChanged", playerId: nextId, phase: "reinforce" },
       { type: "turnStarted", playerId: nextId, turn, reinforcements },
     ]),

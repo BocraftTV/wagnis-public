@@ -213,7 +213,9 @@ describe("start and actions", () => {
     for (let i = 0; i < va.game!.reinforcementsLeft; i++) {
       me.send({ type: "action", action: { type: "placeArmies", territoryId: mine, count: 1 } });
       view = await me.nextView();
-      expect(view.game!.territories[mine]!.armies).toBe(va.game!.territories[mine]!.armies + i + 1);
+      expect(view.game!.territories[mine]!.armies).toBe(
+        va.game!.territories[mine]!.armies! + i + 1,
+      );
     }
     expect(view.game!.reinforcementsLeft).toBe(0);
     for (let i = 0; i < 3; i++) {

@@ -480,3 +480,12 @@ describe("labels", () => {
     }
   });
 });
+
+describe("sea routes: engine data and drawing list agree (plan 014 B)", () => {
+  it("the client draws exactly the sea routes the engine knows, none twice", () => {
+    const engine = map.seaRoutes.map(([a, b]) => pairKey(a, b)).sort();
+    const drawn = weltLayout.seaRoutes.map((r) => pairKey(r.a, r.b)).sort();
+    expect(drawn).toEqual(engine);
+    expect(new Set(drawn).size).toBe(drawn.length);
+  });
+});

@@ -32,6 +32,14 @@ export function validateMap(map: MapDefinition): MapValidation {
       }
     }
   }
+  const seenRoutes = new Set<string>();
+  for (const [a, b] of map.seaRoutes) {
+    const key = [a, b].sort().join("|");
+    if (seenRoutes.has(key)) errors.push(`duplicate sea route ${a} - ${b}`);
+    seenRoutes.add(key);
+    if (!byId.get(a)?.neighbors.includes(b))
+      errors.push(`sea route ${a} - ${b} is not a neighbour pair`);
+  }
   for (const c of map.continents) {
     if (!usedContinents.has(c.id)) errors.push(`continent ${c.id} has no territories`);
   }

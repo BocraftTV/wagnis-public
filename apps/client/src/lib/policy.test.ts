@@ -16,6 +16,7 @@ const view = (roomId: string, version: number): RoomView => ({
   missionDraft: false,
   holdToWin: false,
   roundLimit: null,
+  worldEvents: false,
   gameNo: 1,
   publicUrl: null,
   game: null,

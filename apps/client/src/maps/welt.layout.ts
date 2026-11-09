@@ -32,7 +32,7 @@ export interface WorldLayout {
   territories: Record<string, WorldTerritoryLayout>;
   /** Continent name labels (always visible), centered on the point. */
   continentLabels: Record<string, Point>;
-  /** The 16 sea routes, drawn dashed. Presentation list; the engine does not tell land and sea apart. */
+  /** The 16 sea routes, drawn dashed. Drawing list; the engine has the same pairs as `seaRoutes` (a test checks that they agree). */
   seaRoutes: SeaRoute[];
   /** Terrain pattern over the owner color (decoration only; carries no information). */
   terrain: Record<string, Terrain>;

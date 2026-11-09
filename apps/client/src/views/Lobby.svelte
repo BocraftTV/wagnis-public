@@ -17,6 +17,7 @@
     modeHint,
     modeLabel,
   } from "../lib/mapname.js";
+  import { worldEventsHint, worldEventsLabel } from "../lib/events.js";
   import { qrHint, qrTarget } from "../lib/qr/target.js";
   import {
     roundLimitChoices,
@@ -139,6 +140,22 @@
       </div>
       <p class="muted">{roundLimitHint(view.roundLimit)}</p>
     </section>
+    <section aria-label={worldEventsLabel}>
+      <h2>{worldEventsLabel}</h2>
+      <div class="seg" role="group" aria-label={worldEventsLabel}>
+        <button
+          class:secondary={view.worldEvents}
+          aria-pressed={!view.worldEvents}
+          onclick={() => conn.sendHost(settingsMessage({ worldEvents: false }))}>Aus</button
+        >
+        <button
+          class:secondary={!view.worldEvents}
+          aria-pressed={view.worldEvents}
+          onclick={() => conn.sendHost(settingsMessage({ worldEvents: true }))}>An</button
+        >
+      </div>
+      <p class="muted">{worldEventsHint(view.worldEvents)}</p>
+    </section>
     {#if view.victoryMode === "missions"}
       <section aria-label="Missions-Optionen">
         <h2>Missionen</h2>
@@ -180,6 +197,8 @@
     <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
     <p class="map">Rundenlimit: {roundLimitLabel(view.roundLimit)}</p>
     <p class="muted">{roundLimitHint(view.roundLimit)}</p>
+    <p class="map">{worldEventsLabel}: {view.worldEvents ? "An" : "Aus"}</p>
+    <p class="muted">{worldEventsHint(view.worldEvents)}</p>
     {#if view.victoryMode === "missions"}
       <p class="map">Missionen: {view.missionDraft ? missionDraftLabel : "Eine Mission"}</p>
       <p class="muted">{missionDraftHint(view.missionDraft)}</p>

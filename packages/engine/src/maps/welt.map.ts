@@ -2,12 +2,31 @@ import type { MapDefinition } from "../map/types.js";
 
 /**
  * The world map: 42 territories in 8 continents (docs/weltkarte-entwurf.md, rules.md question 7). The
- * territory order is part of the data: it fixes the card symbols (rules.md question 12). Land borders and sea
- * routes are not told apart here; the client draws the sea routes from its own list.
+ * territory order is part of the data: it fixes the card symbols (rules.md question 12). The sea routes are marked
+ * in `seaRoutes` (a subset of the neighbours, plan 014 B); the client draws them from its own layout list, a test
+ * checks that both agree.
  */
 export const welt: MapDefinition = {
   id: "welt",
   name: "Welt",
+  seaRoutes: [
+    ["nordwestland", "ostsibirien"],
+    ["hudsonland", "groenland"],
+    ["groenland", "nebelinseln"],
+    ["atlantikkueste", "antillen"],
+    ["antillen", "orinokoland"],
+    ["nordostkueste", "sahelguertel"],
+    ["nebelinseln", "nordlande"],
+    ["nebelinseln", "atlantikmark"],
+    ["atlantikmark", "atlasland"],
+    ["wuestenhalbinsel", "ostafrika"],
+    ["ostsibirien", "japan"],
+    ["kernland", "japan"],
+    ["hinterindien", "sundainseln"],
+    ["sundainseln", "neuguinea"],
+    ["neuguinea", "suedland"],
+    ["sundainseln", "suedland"],
+  ],
   continents: [
     {
       id: "nordamerika",

@@ -90,6 +90,8 @@ describe("viewFor", () => {
         "winReason",
         "winnerId",
         "winnerIds",
+        "worldEvent",
+        "worldEventsLeft",
         "missions",
       ].sort(),
     );

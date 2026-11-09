@@ -91,7 +91,7 @@ function seed(label: string): { roomId: string; stored: string } {
 
 describe("loadState with the Phase-5 fixture (plan 007, step 1)", () => {
   it.each(["playing-3p-welt", "playing-2p-neutral", "finished"])(
-    "%s: version 4 loads as 8 with removedPlayerIds [], fortifyMoves 1, is written back once, a second load writes nothing",
+    "%s: version 4 loads as 9 with removedPlayerIds [], fortifyMoves 1, is written back once, a second load writes nothing",
     (label) => {
       const { roomId, stored } = seed(label);
       expect((JSON.parse(stored) as { stateVersion: number }).stateVersion).toBe(4);
@@ -99,11 +99,11 @@ describe("loadState with the Phase-5 fixture (plan 007, step 1)", () => {
       const first = loadState(store, store.getRoom(roomId)!, noRng);
       expect(first.ok).toBe(true);
       if (!first.ok || !first.state) throw new Error("not loaded");
-      expect(first.state.stateVersion).toBe(8);
+      expect(first.state.stateVersion).toBe(9);
       expect(first.state.removedPlayerIds).toEqual([]);
       const written = rawRow(roomId);
       expect(written).not.toBe(stored);
-      expect((JSON.parse(written) as GameState).stateVersion).toBe(8);
+      expect((JSON.parse(written) as GameState).stateVersion).toBe(9);
       expect(JSON.parse(written)).toEqual(JSON.parse(JSON.stringify(first.state)));
       const second = loadState(store, store.getRoom(roomId)!, noRng);
       expect(second.ok && second.state).toEqual(first.state);
@@ -210,7 +210,7 @@ describe("old Phase-5 database (fixture from the real Phase-5 server, plan 007 s
     expect(fixture.schemaMetaVersion).toBe(2);
   });
 
-  it("opening it adds the four columns with the right old values, schema version 6, and a second open changes nothing", async () => {
+  it("opening it adds the four columns with the right old values, schema version 7, and a second open changes nothing", async () => {
     seedOld();
     const old = new Map(fixture.rooms.map((r) => [r.room.id, r.room]));
     await (await boot()).close();
@@ -218,7 +218,7 @@ describe("old Phase-5 database (fixture from the real Phase-5 server, plan 007 s
     const db = new Database(dbPath, { readonly: true });
     const rooms = db.prepare("SELECT * FROM rooms").all() as Record<string, unknown>[];
     const players = db.prepare("SELECT * FROM players").all() as Record<string, unknown>[];
-    expect(db.prepare("SELECT version FROM schema_meta").all()).toEqual([{ version: 6 }]);
+    expect(db.prepare("SELECT version FROM schema_meta").all()).toEqual([{ version: 7 }]);
     db.close();
     expect(rooms).toHaveLength(4);
     for (const r of rooms) {
@@ -243,7 +243,7 @@ describe("old Phase-5 database (fixture from the real Phase-5 server, plan 007 s
   });
 
   it.each(["playing-3p-welt", "playing-2p-neutral"])(
-    "%s: loads as version 8, written back once, keeps playing with rising versions and hidden hands",
+    "%s: loads as version 9, written back once, keeps playing with rising versions and hidden hands",
     async (label) => {
       seedOld();
       const ids = identities(label);
@@ -257,7 +257,7 @@ describe("old Phase-5 database (fixture from the real Phase-5 server, plan 007 s
       expect(first.players.every((p) => !p.removed)).toBe(true);
       expect(first.game!.removedPlayerIds).toEqual([]);
       const written = rawRow(roomId);
-      expect((JSON.parse(written) as GameState).stateVersion).toBe(8);
+      expect((JSON.parse(written) as GameState).stateVersion).toBe(9);
       // the active player ends the attack phase and the fortify phase: versions rise by one each
       const activeIdx = ids.findIndex((i) => i.playerId === first.game!.activePlayerId);
       cs[activeIdx]!.send({ type: "action", action: { type: "endPhase" } });

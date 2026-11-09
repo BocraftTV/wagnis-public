@@ -71,7 +71,13 @@ export function startFirstTurn(state: GameState, events: GameEvent[]): ActionRes
       break;
     }
   }
-  const reinforcements = calculateReinforcements(map, state.rules, state.territories, first);
+  const reinforcements = calculateReinforcements(
+    map,
+    state.rules,
+    state.territories,
+    first,
+    state.worldEvent,
+  );
   const next: GameState = {
     ...state,
     activePlayerId: first,

@@ -66,6 +66,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
 { "type": "settings", "mapId": "welt", "victoryMode": "domination" }
 { "type": "settings", "fortifyMoves": 2 }
 { "type": "settings", "roundLimit": 12 }
+{ "type": "settings", "worldEvents": true }
 { "type": "settings", "missionDraft": true, "holdToWin": true }
 { "type": "host", "reqId": "h1", "action": { "type": "skipTurn", "turn": 12 } }
 { "type": "host", "reqId": "h2", "action": { "type": "removePlayer", "playerId": "9a2e…" } }
@@ -91,6 +92,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
   `backToLobby` darf der Host sie wieder ändern.
 - `settings.roundLimit` (Plan 014 A): `8`, `12`, `16` oder `null` (kein Limit, Standard); jeder andere Wert (`10`, `"8"`, `0`) ist `BAD_MESSAGE`. Gilt in beiden
   Siegmodi, `docs/rules.md` Abschnitt 11.
+- `settings.worldEvents` (Plan 014 B): `boolean`, Standard `false`; Weltereignisse (`docs/rules.md` Abschnitt 12). Andere Typen sind `BAD_MESSAGE`.
 - `host` (Phase 6a): nur Host. `action` ist `skipTurn` (`turn` ganzzahlig ≥ 1, muss die aktuelle `game.turn` sein, sonst
   `STALE_TURN`; der Zug des aktiven Spielers endet, `docs/rules.md` 1.6) oder `removePlayer` (`playerId`, 1–64 Zeichen;
   in der Lobby wird der Sitz freigegeben, im Spiel werden die Gebiete neutral). Der Host kann sich nicht selbst entfernen
@@ -140,6 +142,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
     "missionDraft": false,
     "holdToWin": false,
     "roundLimit": null,
+    "worldEvents": false,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -148,6 +151,8 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
       "turn": 1,
       "round": 1,
       "roundLimit": null,
+      "worldEvent": null,
+      "worldEventsLeft": 0,
       "activePlayerId": "6f1c…",
       "playerOrder": ["6f1c…", "9a2e…"],
       "removedPlayerIds": [],
@@ -223,6 +228,7 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
     "missionDraft": false,
     "holdToWin": false,
     "roundLimit": null,
+    "worldEvents": false,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -231,6 +237,8 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
       "turn": 5,
       "round": 1,
       "roundLimit": null,
+      "worldEvent": null,
+      "worldEventsLeft": 0,
       "activePlayerId": "6f1c…",
       "playerOrder": ["6f1c…", "9a2e…"],
       "removedPlayerIds": [],
@@ -361,6 +369,7 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
     "missionDraft": false,
     "holdToWin": false,
     "roundLimit": null,
+    "worldEvents": false,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -369,6 +378,8 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
       "turn": 9,
       "round": 1,
       "roundLimit": null,
+      "worldEvent": null,
+      "worldEventsLeft": 0,
       "activePlayerId": "9a2e…",
       "playerOrder": ["6f1c…", "9a2e…", "4d7b…"],
       "removedPlayerIds": ["4d7b…"],
@@ -444,6 +455,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     "missionDraft": false,
     "holdToWin": false,
     "roundLimit": null,
+    "worldEvents": false,
     "gameNo": 2,
     "publicUrl": "http://192.0.2.10:3000",
     "game": null
@@ -460,6 +472,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   (Standard `1`), im Spiel der Wert des Spielstands (`rules.fortifyMoves`).
 - Plan 014 A, `roundLimit` (öffentlich, für alle gleich, `8` | `12` | `16` | `null`): in der Lobby die Wahl des Hosts (Standard `null`, Datenbank-Spalte
   `rooms.round_limit`, Schema 6), im Spiel der Wert des Spielstands (`rules.roundLimit`, auch in `game.roundLimit`).
+- Plan 014 B, `worldEvents` (öffentlich, für alle gleich, `boolean`): in der Lobby die Wahl des Hosts (Standard `false`, Datenbank-Spalte `rooms.world_events`, Schema 7),
+  im Spiel der Wert des Spielstands (`rules.worldEvents`).
 - Plan 013, `missionDraft` und `holdToWin` (öffentlich, für alle gleich, `boolean`): die Missions-Optionen „Zwei ziehen, eine behalten“ und „Halten bis
   zum nächsten Zug“; in der Lobby die Wahl des Hosts (Standard `false`; Nachricht `settings`, nur Host, nur Lobby, Datenbank-Spalten
   `rooms.mission_draft` und `rooms.hold_to_win`, Schema 5), im Spiel der Wert des Spielstands. Nur bei `victoryMode: "missions"` wirksam.
@@ -483,6 +497,10 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   - `conquestsThisTurn`: Zahl der Eroberungen in diesem Zug (Plan 013; `conqueredThisTurn` ist genau dann wahr, wenn sie größer als 0 ist).
   - `round` (Plan 014 A, ab 1): die Runde; eine Runde ist ein Umlauf der Zugfolge (`docs/rules.md` 11.1). `roundLimit`: das Limit des Raums oder `null`. Der Client zeigt
     „Runde 5 von 12“ bzw. „Runde 5“.
+  - `worldEvent` (Plan 014 B): `null` oder das Ereignis der laufenden Runde `{ kind, continentId, playerIds, territoryIds }` (`kind`: `storm`, `goldRush`, `plague`, `mobilize`, `truce`,
+    `rebellion`, `cardFlood`, `fog`; `continentId` bei `goldRush`, `plague`, `truce`, sonst `null`; `playerIds` und `territoryIds` nur bei `rebellion`, sonst leer). `worldEventsLeft`:
+    Zahl der Karten im geheimen Stapel (nie sein Inhalt).
+  - Während `fog` stehen `armies`, `maxAttackDice` und `maxMove` fremder und neutraler Gebiete auf `null` (der Client zeigt „?“), und `pendingOccupation` eines anderen Spielers ist `null`.
   - `winnerIds`: alle Sieger, leer bis zum Spielende; mehrere nur bei Gleichstand nach dem Rundenlimit (`winnerId` ist dann der erste in Sitzreihenfolge).
     `scores`: nur bei `winReason: "roundLimit"` die Wertung je Spieler (`playerId`, `territories`, `continentBonus`, `points`, `armies`), sonst `null`.
   - `winnerId`: `null` oder die Spieler-ID, sobald jemand gewonnen hat (nur noch ein Spieler übrig oder im Modus
@@ -714,7 +732,7 @@ Fall daran, es gibt kein zusätzliches Feld):
 - Fehler gehen nur an den Absender, es wird nichts gespeichert. Codes: `BAD_MESSAGE`, `NOT_AUTHENTICATED`,
   `RATE_LIMITED`, `NOT_HOST`, `NOT_IN_LOBBY`, `NOT_IN_GAME`, `NOT_ENOUGH_PLAYERS`, `START_FAILED`,
   `INTERNAL`, `STATE_UNSUPPORTED`, `NOT_FINISHED`, `CANNOT_REMOVE_SELF`, `ALREADY_HOST`, `NOT_PRESENT` sowie die Engine-Fehler `NOT_YOUR_TURN`, `WRONG_PHASE`, `UNKNOWN_TERRITORY`, `NOT_OWNER`,
-  `INVALID_COUNT`, `NOT_ENOUGH_REINFORCEMENTS`, `REINFORCEMENTS_REMAINING`, `UNKNOWN_ACTION`, `UNKNOWN_MAP`
+  `INVALID_COUNT`, `SEA_BLOCKED` (Sturm), `TRUCE` (Waffenstillstand), `NOT_ENOUGH_REINFORCEMENTS`, `REINFORCEMENTS_REMAINING`, `UNKNOWN_ACTION`, `UNKNOWN_MAP`
   sowie die Angriffsfehler `INVALID_DICE`, `NOT_ADJACENT`, `OWN_TARGET`, `NOT_ENOUGH_ARMIES`, `OCCUPY_PENDING`,
   `NO_OCCUPY_PENDING`, `INVALID_OCCUPY_COUNT`, `GAME_OVER` sowie die Fehler für Verschieben und Karten
   `SAME_TERRITORY`, `NOT_CONNECTED`, `MUST_TRADE`, `INVALID_SET`, `UNKNOWN_CARD`, `INVALID_BONUS_TERRITORY` sowie die Host-Fehler `STALE_TURN`, `UNKNOWN_PLAYER`, `PLAYER_REMOVED` (Bedeutung: `docs/rules.md` Abschnitt 8;

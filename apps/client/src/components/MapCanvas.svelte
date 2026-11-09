@@ -3,7 +3,7 @@
   import { segmentsPath } from "../lib/borders.js";
   import { effectiveHit } from "../lib/hit.js";
   import type { TerritoryMark } from "../lib/mark.js";
-  import { territoryHint } from "../lib/hint.js";
+  import { armiesText, territoryHint } from "../lib/hint.js";
   import { COUNTER_RADIUS_PX } from "../lib/layers.js";
   import {
     BADGE_GAP_PX,
@@ -35,16 +35,30 @@
 
   interface Props {
     data: MapData;
-    territories: Record<string, { ownerId: string | null; armies: number }>;
+    territories: Record<string, { ownerId: string | null; armies: number | null }>;
     marks: Record<string, TerritoryMark>;
     /** Territories flashed briefly after a combat. */
     flash: readonly string[];
     ownerName: (id: string | null) => string;
     ownerColor: (id: string | null) => string;
     ontap: (territoryId: string) => void;
+    /** Storm (plan 014 B): the sea routes are closed and drawn faded. */
+    seaClosed?: boolean;
+    /** The continent the round's event is about (goldRush, plague, truce): its name is marked. */
+    eventContinent?: string | null;
   }
 
-  let { data, territories, marks, flash, ownerName, ownerColor, ontap }: Props = $props();
+  let {
+    data,
+    territories,
+    marks,
+    flash,
+    ownerName,
+    ownerColor,
+    ontap,
+    seaClosed = false,
+    eventContinent = null,
+  }: Props = $props();
 
   const layout = $derived(data.layout);
   const names = $derived(Object.fromEntries(data.map.territories.map((t) => [t.id, t.name])));
@@ -266,7 +280,7 @@
           </g>
           <!-- Sea routes: paper underlay, then the dash-dot line. Widths follow the zoom (two paths, rewritten per
                step) because the dash pattern of non-scaling-stroke is not the same in every engine. -->
-          <g class="links">
+          <g class="links" class:closed={seaClosed}>
             {#each [layout.routeDashed, layout.routeSolid] as d, i (i)}
               {#if d}
                 <path class="link-under" {d} stroke-width={3.6 / s} />
@@ -313,7 +327,7 @@
                   transform={`translate(${t.anchor.x} ${t.anchor.y}) scale(${1 / s})`}
                   role="button"
                   tabindex={m?.pickable ? 0 : -1}
-                  aria-label={`${names[id]}, ${ownerName(st.ownerId)}, ${st.armies} Armeen`}
+                  aria-label={`${names[id]}, ${ownerName(st.ownerId)}, ${armiesText(st.armies)}`}
                   aria-disabled={!m?.pickable}
                   aria-pressed={m?.ring === "chosen"}
                   onkeydown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), tapped(id))}
@@ -329,8 +343,8 @@
                   <circle class="coin-edge" r={COUNTER_RADIUS_PX - 4} />
                   <circle class="coin-field" r={COUNTER_RADIUS_PX - 5} />
                   <circle class="focus" r={COUNTER_RADIUS_PX + 2} />
-                  <text class="armies" class:wide={st.armies >= 100} text-anchor="middle" dominant-baseline="central">
-                    {st.armies}
+                  <text class="armies" class:wide={(st.armies ?? 0) >= 100} text-anchor="middle" dominant-baseline="central">
+                    {st.armies ?? "?"}
                   </text>
                 </g>
               {/if}
@@ -345,6 +359,7 @@
                 <g transform={`translate(${p.x} ${p.y}) scale(${1 / s})`}>
                   <text
                     class="continent"
+                    class:event={cid === eventContinent}
                     x={-(BADGE_PX + BADGE_GAP_PX) / 2}
                     text-anchor="middle"
                     dominant-baseline="central"
@@ -502,6 +517,19 @@
   }
   .link {
     stroke: var(--map-sea-route);
+  }
+  /* Storm: the routes are closed, drawn faded and in the warning color. */
+  .closed .link {
+    stroke: var(--danger);
+    stroke-opacity: 0.55;
+  }
+  .closed .link-under {
+    stroke-opacity: 0.2;
+  }
+  .continent.event {
+    fill: var(--accent);
+    font-weight: 800;
+    text-decoration: underline;
   }
   .hit {
     fill: transparent;

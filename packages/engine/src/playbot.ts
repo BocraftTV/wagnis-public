@@ -20,6 +20,7 @@ import type {
   RuleConfig,
 } from "./index.js";
 import { pendingChoosers } from "./index.js";
+import { eventOf, isSeaRoute } from "./world-events.js";
 
 export interface Step {
   /** State before the action, the action, and its outcome. */
@@ -85,6 +86,10 @@ export function chooseAction(
     for (const [from, t] of own) {
       if (t.armies < 2) continue;
       for (const to of map.territories.find((x) => x.id === from)!.neighbors) {
+        // The events of the round close some targets (plan 014 B): the bot only picks legal ones.
+        const toDef = map.territories.find((x) => x.id === to)!;
+        if (eventOf(state, "storm") && isSeaRoute(map, from, to)) continue;
+        if (eventOf(state, "truce")?.continentId === toDef.continentId) continue;
         if (state.territories[to]!.ownerId !== me) {
           pairs.push({ from, to, dice: Math.min(3, t.armies - 1) });
         }

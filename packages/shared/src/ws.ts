@@ -75,6 +75,8 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
       holdToWin: z.boolean().optional(),
       /** Plan 014 A: round limit, `null` = off. */
       roundLimit: roundLimitSchema.optional(),
+      /** Plan 014 B: a world event at the start of every round. */
+      worldEvents: z.boolean().optional(),
     })
     .refine(
       (m) =>
@@ -83,7 +85,8 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
         m.fortifyMoves !== undefined ||
         m.missionDraft !== undefined ||
         m.holdToWin !== undefined ||
-        m.roundLimit !== undefined,
+        m.roundLimit !== undefined ||
+        m.worldEvents !== undefined,
       { message: "settings needs at least one setting" },
     ),
   /** Host only (rules.md 1.6): skip a turn, remove a player. */
@@ -155,6 +158,8 @@ export const wsErrorCodeSchema = z.enum([
   "PLAYER_REMOVED",
   "ALREADY_CHOSEN",
   "INVALID_CHOICE",
+  "SEA_BLOCKED",
+  "TRUCE",
 ]);
 export type WsErrorCode = z.infer<typeof wsErrorCodeSchema>;
 

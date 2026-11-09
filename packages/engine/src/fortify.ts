@@ -2,6 +2,7 @@ import { findTerritory } from "./attack.js";
 import { getMap } from "./maps/index.js";
 import type { MapDefinition } from "./map/types.js";
 import { endTurn } from "./turn.js";
+import { usableNeighbors } from "./world-events.js";
 import { checkVictory } from "./victory.js";
 import type {
   Action,
@@ -19,8 +20,8 @@ type FortifyAction = Extract<Action, { type: "fortify" }>;
 
 const fail = (code: ActionErrorCode): ActionResult => ({ ok: false, code });
 
-const neighborsOf = (map: MapDefinition, id: TerritoryId): TerritoryId[] =>
-  map.territories.find((t) => t.id === id)?.neighbors ?? [];
+const neighborsOf = (map: MapDefinition, state: GameState, id: TerritoryId): TerritoryId[] =>
+  usableNeighbors(map, state, id);
 
 /**
  * Own territories the player may move armies to from `fromId` (never `fromId` itself): direct own
@@ -35,13 +36,13 @@ export function fortifyTargets(
   const own = (id: TerritoryId): boolean => state.territories[id]?.ownerId === playerId;
   const reached = new Set<TerritoryId>();
   if (state.rules.fortifyReach === "adjacent") {
-    for (const n of neighborsOf(map, fromId)) if (own(n)) reached.add(n);
+    for (const n of neighborsOf(map, state, fromId)) if (own(n)) reached.add(n);
     return reached;
   }
   const queue: TerritoryId[] = [fromId];
   const seen = new Set<TerritoryId>([fromId]);
   for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
-    for (const n of neighborsOf(map, next)) {
+    for (const n of neighborsOf(map, state, next)) {
       if (seen.has(n) || !own(n)) continue;
       seen.add(n);
       reached.add(n);
@@ -102,7 +103,8 @@ export function fortifyView(map: MapDefinition, state: GameState, playerId: Play
     const targets: Record<TerritoryId, TerritoryId[]> = {};
     for (const t of own) {
       if ((state.territories[t.id]?.armies ?? 0) < 2) continue;
-      const to = own.filter((o) => t.neighbors.includes(o.id)).map((o) => o.id);
+      const usable = neighborsOf(map, state, t.id);
+      const to = own.filter((o) => usable.includes(o.id)).map((o) => o.id);
       if (to.length > 0) targets[t.id] = to;
     }
     return { reach: "adjacent", targets, ...moves };

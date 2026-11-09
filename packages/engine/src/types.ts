@@ -74,6 +74,22 @@ export interface RuleConfig {
   holdToWin: boolean;
   /** Plan 014 (A): after this many rounds the game is scored; `null` means no limit. Lobby choice of the host (rules.md 11). */
   roundLimit: RoundLimit;
+  /** Plan 014 B: a world event is drawn at the start of every round (rules.md 12). Lobby choice of the host. */
+  worldEvents: boolean;
+}
+
+export type WorldEventKind =
+  "storm" | "goldRush" | "plague" | "mobilize" | "truce" | "rebellion" | "cardFlood" | "fog";
+
+/** The event of the current round (public). The fields are empty where the kind has no use for them. */
+export interface WorldEvent {
+  kind: WorldEventKind;
+  /** The continent that goldRush, plague and truce hit; otherwise null. */
+  continentId: ContinentId | null;
+  /** Rebellion: the players who lost territories; otherwise empty. */
+  playerIds: PlayerId[];
+  /** Rebellion: the territories that went neutral; otherwise empty. */
+  territoryIds: TerritoryId[];
 }
 
 /** Offered round limits (rules.md 11, question 50); `null` is off. */
@@ -102,6 +118,8 @@ export interface SecretState {
   /** Hold-to-win marker: the mission was met at the end of the holder's own turn. Internal; own view only. */
   victoryPending: Record<PlayerId, boolean>;
   hand: Record<PlayerId, CardId[]>;
+  /** Plan 014 B: the world event cards still to be drawn, `[0]` is the top. Never leaves the server. */
+  eventDeck: WorldEventKind[];
   /** Draw pile; `deck[0]` is the top card. Never leaves the server. */
   deck: CardId[];
   /** Traded cards. Never leaves the server. */
@@ -130,6 +148,8 @@ export interface GameState {
   conquestsThisTurn: number;
   /** Accepted fortify moves in the current turn; reset at every turn change (rules.md 5.3). Internal, never in a view. */
   fortifyMovesDone: number;
+  /** Plan 014 B: the event of the current round, or null (events off). Public. */
+  worldEvent: WorldEvent | null;
   /** Set as soon as someone wins (rules.md 1.2). */
   winnerId: PlayerId | null;
   /** Set together with `winnerId`. */
@@ -265,7 +285,9 @@ export type ActionErrorCode =
   | "UNKNOWN_PLAYER"
   | "PLAYER_REMOVED"
   | "ALREADY_CHOSEN"
-  | "INVALID_CHOICE";
+  | "INVALID_CHOICE"
+  | "SEA_BLOCKED"
+  | "TRUCE";
 
 export type SetupErrorCode =
   | "INVALID_MAP"
@@ -280,6 +302,7 @@ export type MigrateErrorCode = "STATE_VERSION_INVALID" | "STATE_VERSION_UNSUPPOR
 export type GameEvent =
   | { type: "gameStarted"; firstPlayerId: PlayerId }
   | { type: "roundStarted"; round: number }
+  | { type: "worldEventDrawn"; event: WorldEvent }
   | { type: "turnStarted"; playerId: PlayerId; turn: number; reinforcements: number }
   /** Public, without the mission (plan 013). */
   | { type: "missionChosen"; playerId: PlayerId }
@@ -335,11 +358,13 @@ export type ActionResult =
 export type SetupResult =
   { ok: true; state: GameState; events: GameEvent[] } | { ok: false; code: SetupErrorCode };
 
-export interface TerritoryView extends TerritoryState {
-  /** `min(3, armies - 1)`, at least 0; 0 means this territory cannot attack. */
-  maxAttackDice: number;
-  /** `armies - 1`, at least 0: most armies that can leave this territory in a fortify move. */
-  maxMove: number;
+export interface TerritoryView extends Omit<TerritoryState, "armies"> {
+  /** The armies; `null` for foreign and neutral territories while the fog event stands (rules.md 12). */
+  armies: number | null;
+  /** `min(3, armies - 1)`, at least 0; 0 means this territory cannot attack. `null` in the fog, like `armies`. */
+  maxAttackDice: number | null;
+  /** `armies - 1`, at least 0: most armies that can leave this territory in a fortify move. `null` in the fog. */
+  maxMove: number | null;
 }
 
 /**
@@ -425,6 +450,9 @@ export interface GameView {
   round: number;
   /** The room's round limit, or null (no limit). */
   roundLimit: RoundLimit;
+  /** Plan 014 B: the event of this round, or null; and how many cards are left in the event deck. */
+  worldEvent: WorldEvent | null;
+  worldEventsLeft: number;
   activePlayerId: PlayerId;
   playerOrder: PlayerId[];
   /** Players the host removed, in the order of removal; public, the same for every viewer (rules.md 7). */

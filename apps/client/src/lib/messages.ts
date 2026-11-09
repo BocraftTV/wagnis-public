@@ -55,6 +55,8 @@ export const wsErrorText: Record<WsErrorCode, string> = {
   PLAYER_REMOVED: "Dieser Spieler ist nicht mehr dabei.",
   ALREADY_CHOSEN: "Du hast schon gewählt.",
   INVALID_CHOICE: "Diese Auswahl gibt es nicht.",
+  SEA_BLOCKED: "Im Sturm sind die Seewege gesperrt.",
+  TRUCE: "In diesem Kontinent herrscht Waffenstillstand.",
   NOT_FINISHED: "Die Partie läuft noch.",
   CANNOT_REMOVE_SELF: "Gib erst die Host-Rolle ab, dann kann dich der neue Host entfernen.",
   ALREADY_HOST: "Das ist schon der Host.",

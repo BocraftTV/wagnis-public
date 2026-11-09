@@ -22,6 +22,8 @@ export interface RoomRow {
   holdToWin: boolean;
   /** Round limit chosen in the lobby (plan 014 A), `null` = off; a running game uses the value in its state. */
   roundLimit: RoundLimit;
+  /** World events chosen in the lobby (plan 014 B); a running game uses the value in its state. */
+  worldEvents: boolean;
   /** Number of the game in this room, from 1; rises with every "back to the lobby". */
   gameNo: number;
   stateJson: string | null;
@@ -62,7 +64,8 @@ CREATE TABLE IF NOT EXISTS rooms (
   fortify_moves INTEGER NOT NULL DEFAULT 1,
   mission_draft INTEGER NOT NULL DEFAULT 0,
   hold_to_win INTEGER NOT NULL DEFAULT 0,
-  round_limit INTEGER
+  round_limit INTEGER,
+  world_events INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
@@ -78,7 +81,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS players_room_name ON players (room_id, lower(n
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
 `;
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 export class Store {
   private readonly db: Database.Database;
@@ -100,7 +103,7 @@ export class Store {
    * `players.removed` (0). All in one transaction; rows are not rewritten otherwise, and opening an up-to-date
    * database changes nothing. Version 4 (plan 011) adds `rooms.fortify_moves` (old rows: 1, the one fortify move per
    * turn every room had until then). Version 5 (plan 013) adds `rooms.mission_draft` and `rooms.hold_to_win` (old rows: 0,
-   * both options off). Version 6 (plan 014 A) adds `rooms.round_limit` (old rows: NULL, no limit).
+   * both options off). Version 6 (plan 014 A) adds `rooms.round_limit` (old rows: NULL, no limit). Version 7 (plan 014 B) adds `rooms.world_events` (old rows: 0, events off).
    */
   private upgrade(): void {
     const has = (table: string, column: string): boolean =>
@@ -131,6 +134,9 @@ export class Store {
     }
     if (!has("rooms", "round_limit")) {
       this.db.exec("ALTER TABLE rooms ADD COLUMN round_limit INTEGER");
+    }
+    if (!has("rooms", "world_events")) {
+      this.db.exec("ALTER TABLE rooms ADD COLUMN world_events INTEGER NOT NULL DEFAULT 0");
     }
     if (!has("players", "removed")) {
       this.db.exec("ALTER TABLE players ADD COLUMN removed INTEGER NOT NULL DEFAULT 0");
@@ -165,6 +171,7 @@ export class Store {
       missionDraft: r["mission_draft"] === 1,
       holdToWin: r["hold_to_win"] === 1,
       roundLimit: (r["round_limit"] as RoundLimit | null | undefined) ?? null,
+      worldEvents: r["world_events"] === 1,
       gameNo: r["game_no"] as number,
       stateJson: r["state_json"] as string | null,
       version: r["version"] as number,
@@ -329,6 +336,7 @@ export class Store {
       missionDraft?: boolean | undefined;
       holdToWin?: boolean | undefined;
       roundLimit?: RoundLimit | undefined;
+      worldEvents?: boolean | undefined;
     },
     now: number,
   ): boolean {
@@ -356,6 +364,10 @@ export class Store {
         this.db
           .prepare("UPDATE rooms SET round_limit = ? WHERE id = ?")
           .run(patch.roundLimit, roomId);
+      if (patch.worldEvents !== undefined)
+        this.db
+          .prepare("UPDATE rooms SET world_events = ? WHERE id = ?")
+          .run(patch.worldEvents ? 1 : 0, roomId);
       this.db
         .prepare(
           "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",

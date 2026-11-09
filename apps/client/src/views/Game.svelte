@@ -43,6 +43,7 @@
     winReasonText,
   } from "../lib/missions.js";
   import { roundText, scoreRows, winnersText } from "../lib/rounds.js";
+  import { eventText, eventTitle } from "../lib/events.js";
   import { armiesText } from "../lib/hint.js";
   import { backToLobbyMessage, canBackToLobby, nameWithMark, playerStatus } from "../lib/host.js";
   import type { TerritoryMark } from "../lib/mark.js";
@@ -114,7 +115,7 @@
       return selection.from ? moveTargets.includes(id) || moveOrigins.includes(id) : moveOrigins.includes(id);
     }
     if (!attacking) return false;
-    return t.ownerId === me ? t.maxAttackDice > 0 : targets.includes(id);
+    return t.ownerId === me ? (t.maxAttackDice ?? 0) > 0 : targets.includes(id);
   }
 
   // Ring marks for the map, from the same rules the taps use.
@@ -333,6 +334,12 @@
     {/if}
   </header>
 
+  {#if game.worldEvent && !finished}
+    <div class="event-banner" role="status">
+      <strong>Ereignis: {eventTitle(game.worldEvent.kind)}.</strong>
+      {eventText(game.worldEvent, missionCtx)}
+    </div>
+  {/if}
   {#if pendingBanner}
     <div class="pending-banner" role="status">{pendingBanner}</div>
   {/if}
@@ -511,6 +518,8 @@
         ownerName={playerName}
         ownerColor={colorOf}
         ontap={tap}
+        seaClosed={game.worldEvent?.kind === "storm"}
+        eventContinent={game.worldEvent?.continentId ?? null}
       />
       </div>
     {:else}
@@ -671,6 +680,11 @@
   }
   .status .mission-btn {
     margin-left: 0;
+  }
+  .event-banner {
+    padding: 0.5rem 1rem;
+    background: var(--panel-2);
+    border-left: 4px solid var(--danger);
   }
   .pending-banner {
     padding: 0.5rem 1rem;

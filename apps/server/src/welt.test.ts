@@ -102,7 +102,9 @@ async function playTurn(r: Room, mapId: string): Promise<void> {
           view().territories[t.id]!.ownerId === me() &&
           t.neighbors.some((n) => view().territories[n]!.ownerId !== me()),
       )
-      .sort((a, b) => view().territories[b.id]!.armies - view().territories[a.id]!.armies);
+      .sort(
+        (a, b) => (view().territories[b.id]!.armies ?? 0) - (view().territories[a.id]!.armies ?? 0),
+      );
   const hand = view().secret.hand;
   expect(hand.length).toBeLessThan(5);
   const left = view().reinforcementsLeft;
@@ -112,11 +114,11 @@ async function playTurn(r: Room, mapId: string): Promise<void> {
     let best: { from: string; to: string; score: number } | undefined;
     for (const t of map.territories) {
       const s = view().territories[t.id]!;
-      if (s.ownerId !== me() || s.maxAttackDice < 1) continue;
+      if (s.ownerId !== me() || (s.maxAttackDice ?? 0) < 1) continue;
       for (const n of t.neighbors) {
         const o = view().territories[n]!;
         if (o.ownerId === me()) continue;
-        const score = s.armies - o.armies;
+        const score = (s.armies ?? 0) - (o.armies ?? 0);
         if (!best || score > best.score) best = { from: t.id, to: n, score };
       }
     }
@@ -187,7 +189,7 @@ describe("creating rooms with a map", () => {
       const armies = new Map<string | null, number>();
       const count = new Map<string | null, number>();
       for (const t of Object.values(g.territories)) {
-        armies.set(t.ownerId, (armies.get(t.ownerId) ?? 0) + t.armies);
+        armies.set(t.ownerId, (armies.get(t.ownerId) ?? 0) + (t.armies ?? 0));
         count.set(t.ownerId, (count.get(t.ownerId) ?? 0) + 1);
       }
       const owners =
@@ -293,14 +295,14 @@ describe("old Phase-4 database (fixture from the real Phase-4 server)", () => {
     expect(before.meta).toEqual([{ version: 1 }]);
   });
 
-  it("gets the column with testland for old rows, schema version 6 (phase 6a columns too), and a second open changes nothing", async () => {
+  it("gets the column with testland for old rows, schema version 7 (phase 6a columns too), and a second open changes nothing", async () => {
     const dbPath = newDb();
     seedOld(dbPath);
     await bootOld(dbPath);
     await servers.pop()!.close();
     const first = columns(dbPath);
     expect(first.cols).toContain("map_id");
-    expect(first.meta).toEqual([{ version: 6 }]);
+    expect(first.meta).toEqual([{ version: 7 }]);
     expect(first.rooms).toHaveLength(3);
     for (const r of first.rooms as { map_id: string }[]) expect(r.map_id).toBe("testland");
     // the state rows themselves were not rewritten
@@ -335,7 +337,7 @@ describe("old Phase-4 database (fixture from the real Phase-4 server)", () => {
   });
 
   it.each(["playing-3p", "playing-2p-neutral"])(
-    "%s: plays on (place, attack, end phase), version rises, the stored state is version 8 (migrated on load)",
+    "%s: plays on (place, attack, end phase), version rises, the stored state is version 9 (migrated on load)",
     async (label) => {
       const dbPath = newDb();
       seedOld(dbPath);
@@ -367,7 +369,7 @@ describe("old Phase-4 database (fixture from the real Phase-4 server)", () => {
         .find(
           ([a, b]) =>
             g().territories[a]!.ownerId === me &&
-            g().territories[a]!.maxAttackDice >= 1 &&
+            (g().territories[a]!.maxAttackDice ?? 0) >= 1 &&
             g().territories[b]!.ownerId !== me,
         );
       expect(pair).toBeDefined();
@@ -377,7 +379,7 @@ describe("old Phase-4 database (fixture from the real Phase-4 server)", () => {
       expect(versions).toEqual([...versions].sort((a, b) => a - b));
       expect(new Set(versions).size).toBe(versions.length);
       const state = storedState(dbPath, ids[0]!.roomId);
-      expect(state.stateVersion).toBe(8);
+      expect(state.stateVersion).toBe(9);
       expect(state.mapId).toBe("testland");
       for (const c of r.c) {
         const wire = c.raw.join("\n");

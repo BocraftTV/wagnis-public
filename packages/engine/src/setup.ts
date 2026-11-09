@@ -8,6 +8,7 @@ import { calculateReinforcements } from "./reinforcement.js";
 import { shuffle } from "./shuffle.js";
 import { STATE_VERSION } from "./state-version.js";
 import { checkVictory } from "./victory.js";
+import { drawWorldEvent, freshEventDeck } from "./world-events.js";
 import type {
   GameEvent,
   GameState,
@@ -50,6 +51,7 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     return { ok: false, code: "INVALID_RULES" };
   if (typeof rules.missionDraft !== "boolean" || typeof rules.holdToWin !== "boolean")
     return { ok: false, code: "INVALID_RULES" };
+  if (typeof rules.worldEvents !== "boolean") return { ok: false, code: "INVALID_RULES" };
   if (![null, 8, 12, 16].includes(rules.roundLimit as number | null))
     return { ok: false, code: "INVALID_RULES" };
   // Below 5 cards a hand can lack a valid set, so a mandatory trade could get stuck (rules.md 6).
@@ -88,7 +90,6 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
   const start = rng.int(n);
   const playerOrder = [...playerIds.slice(start), ...playerIds.slice(0, start)];
   const firstPlayerId = playerOrder[0]!;
-  const reinforcements = calculateReinforcements(map, rules, territories, firstPlayerId);
   // Shuffled last, so the Rng calls for the territory deal and the start player stay as before.
   const deck = shuffle(
     cardCatalog(map, rules).map((c) => c.id),
@@ -101,7 +102,10 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
   const none = <T>(value: T): Record<PlayerId, T> =>
     Object.fromEntries(playerIds.map((p) => [p, value]));
 
-  const state: GameState = {
+  // The event deck is shuffled after everything else, so the Rng calls of games without events stay as they were.
+  const eventDeck = rules.worldEvents ? freshEventDeck(rng) : [];
+
+  const initial: GameState = {
     mapId: map.id,
     rules,
     playerOrder,
@@ -109,7 +113,7 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     phase: draft ? "missionChoice" : "reinforce",
     turn: 1,
     round: 1,
-    reinforcementsLeft: draft ? 0 : reinforcements,
+    reinforcementsLeft: 0,
     territories,
     secret: {
       mission: dealt?.mission ?? Object.fromEntries(playerIds.map((p) => [p, null])),
@@ -122,6 +126,7 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
       discardedMission: none(null),
       victoryPending: none(false),
       hand: Object.fromEntries(playerIds.map((p) => [p, []])),
+      eventDeck,
       deck,
       discard: [],
     },
@@ -132,6 +137,7 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     winnerId: null,
     winReason: null,
     winnerIds: [],
+    worldEvent: null,
     removedPlayerIds: [],
     stateVersion: STATE_VERSION,
     lastCombat: null,
@@ -139,12 +145,38 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     lastTrade: null,
     tradeSeq: 0,
   };
+  // The event of round 1 is drawn at the start (also with the draft: it then stands during the choice), before the
+  // first reinforcements are worked out, so goldRush and mobilize count for the first player too.
+  const drawn = drawWorldEvent(initial, rng);
+  const state: GameState = {
+    ...drawn.state,
+    reinforcementsLeft: draft
+      ? 0
+      : calculateReinforcements(
+          map,
+          rules,
+          drawn.state.territories,
+          firstPlayerId,
+          drawn.state.worldEvent,
+        ),
+  };
   // With the draft the first turn only starts once everybody has chosen (`startFirstTurn`, mission-choice.ts).
-  if (draft) return { ok: true, state, events: [{ type: "gameStarted", firstPlayerId }] };
+  if (draft)
+    return {
+      ok: true,
+      state,
+      events: [{ type: "gameStarted", firstPlayerId }, ...drawn.events],
+    };
   const events: GameEvent[] = [
     { type: "gameStarted", firstPlayerId },
     { type: "roundStarted", round: 1 },
-    { type: "turnStarted", playerId: firstPlayerId, turn: 1, reinforcements },
+    ...drawn.events,
+    {
+      type: "turnStarted",
+      playerId: firstPlayerId,
+      turn: 1,
+      reinforcements: state.reinforcementsLeft,
+    },
   ];
   // Start of the first player's turn: same check as at every turn start (never wins with the map lists (checked for testland and welt)).
   return { ok: true, ...checkVictory(state, events) };

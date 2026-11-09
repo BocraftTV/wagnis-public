@@ -44,6 +44,7 @@ const view = {
   missionDraft: false,
   holdToWin: false,
   roundLimit: null,
+  worldEvents: false,
   gameNo: 1,
   publicUrl: null,
   game: {
@@ -52,6 +53,8 @@ const view = {
     turn: 1,
     round: 1,
     roundLimit: null,
+    worldEvent: null,
+    worldEventsLeft: 0,
     activePlayerId: "p1",
     playerOrder: ["p1", "p2"],
     removedPlayerIds: [],
@@ -456,6 +459,19 @@ describe("phase 4 protocol: neutral owner, missions, resolution", () => {
     expect(ok("eliminate everyone")).toBe(false);
   });
 
+  it("accepts a world event, with armies hidden by the fog, and rejects an unknown kind", () => {
+    const g = (extra: object) => gameViewSchema.safeParse({ ...view.game, ...extra }).success;
+    const event = { kind: "truce", continentId: "nordreich", playerIds: [], territoryIds: [] };
+    expect(g({ worldEvent: event, worldEventsLeft: 5 })).toBe(true);
+    expect(g({ worldEvent: { ...event, kind: "meteor" } })).toBe(false);
+    expect(g({ worldEvent: { kind: "fog" } })).toBe(false);
+    expect(g({ worldEventsLeft: -1 })).toBe(false);
+    const fogged = {
+      eisenfurt: { ownerId: "p2", armies: null, maxAttackDice: null, maxMove: null },
+    };
+    expect(g({ territories: fogged })).toBe(true);
+  });
+
   it("rejects bad resolution and win fields", () => {
     const g = (extra: object) => gameViewSchema.safeParse({ ...view.game, ...extra }).success;
     expect(g({ winReason: "timeout" })).toBe(false);
@@ -576,6 +592,8 @@ describe("host protocol (phase 6a)", () => {
       { type: "settings", roundLimit: 8 },
       { type: "settings", roundLimit: 16 },
       { type: "settings", roundLimit: null },
+      { type: "settings", worldEvents: true },
+      { type: "settings", worldEvents: false },
       { type: "settings", mapId: "welt", victoryMode: "domination", fortifyMoves: 2 },
       { type: "settings", mapId: "testland", fortifyMoves: 1 },
       { type: "settings", victoryMode: "missions", fortifyMoves: 2 },
@@ -598,6 +616,8 @@ describe("host protocol (phase 6a)", () => {
       { type: "settings", roundLimit: 10 },
       { type: "settings", roundLimit: "8" },
       { type: "settings", roundLimit: 0 },
+      { type: "settings", worldEvents: "yes" },
+      { type: "settings", worldEvents: null },
       { type: "settings", fortifyMoves: 3 },
       { type: "settings", fortifyMoves: "2" },
       { type: "settings", fortifyMoves: true },
