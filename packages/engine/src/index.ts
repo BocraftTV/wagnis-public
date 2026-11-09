@@ -1,3 +1,4 @@
+export { pendingChoosers } from "./mission-choice.js";
 export * from "./types.js";
 export * from "./map-data.js";
 export { validateMap } from "./map/validate.js";
@@ -15,8 +16,8 @@ export { applyAction } from "./apply.js";
 export { applyHostAction } from "./host.js";
 export { viewFor } from "./view.js";
 export { normalizeState } from "./normalize.js";
-export type { GameStateV3, GameStateV4, GameStateV5 } from "./normalize.js";
-export { migrateState, migrate3to4, migrate4to5, migrate5to6 } from "./migrate.js";
+export type { GameStateV3, GameStateV4, GameStateV5, GameStateV6 } from "./normalize.js";
+export { migrateState, migrate3to4, migrate4to5, migrate5to6, migrate6to7 } from "./migrate.js";
 export type { MigrateResult } from "./migrate.js";
 export { STATE_VERSION } from "./state-version.js";
 export { isEliminated } from "./players.js";

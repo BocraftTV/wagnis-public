@@ -169,7 +169,7 @@ describe("start and persistence", () => {
       expect(views[i]!.game!.victoryMode).toBe("missions");
     }
     const stored = JSON.parse(new Store(env.dbPath).getRoom(host.roomId)!.stateJson!) as GameState;
-    expect(stored.stateVersion).toBe(6);
+    expect(stored.stateVersion).toBe(7);
     expect(Object.keys(stored.secret.originalMission)).toHaveLength(3);
   });
 
@@ -198,7 +198,7 @@ describe("start and persistence", () => {
     expect(rb.game).toEqual(vb.game);
     const after = JSON.parse(new Store(env.dbPath).getRoom(host.roomId)!.stateJson!) as GameState;
     expect(after).toEqual(before);
-    expect(after.stateVersion).toBe(6);
+    expect(after.stateVersion).toBe(7);
     expect(after.secret.originalMission).toEqual(before.secret.originalMission);
     expect(Object.values(after.territories).filter((t) => t.ownerId === null)).toHaveLength(2);
   });
@@ -374,9 +374,9 @@ describe("after the game: the resolution", () => {
     expect(v.game!.winnerId).toBe(h);
     expect(v.game!.winReason).toBe("mission");
     expect(v.game!.missions).toEqual({
-      [h]: { mission: kill(g), originalMission: null },
-      [g]: { mission: hold(6, 3), originalMission: null },
-      [t]: { mission: testlandMissions.fallback, originalMission: kill(g) },
+      [h]: { mission: kill(g), originalMission: null, discarded: null },
+      [g]: { mission: hold(6, 3), originalMission: null, discarded: null },
+      [t]: { mission: testlandMissions.fallback, originalMission: kill(g), discarded: null },
     });
   };
 

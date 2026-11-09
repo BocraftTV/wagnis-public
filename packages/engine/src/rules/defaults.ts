@@ -4,6 +4,8 @@ export const defaultFortifyReach: RuleConfig["fortifyReach"] = "connected";
 
 /** One fortify move per turn (rules.md 5.3, question 38). */
 export const defaultFortifyMoves: RuleConfig["fortifyMoves"] = 1;
+export const defaultMissionDraft = false;
+export const defaultHoldToWin = false;
 
 export const defaultCardRules: CardRules = {
   jokers: 2,

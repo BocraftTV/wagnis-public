@@ -69,8 +69,8 @@ describe("mission deal", () => {
     }
   });
 
-  it("self target (3 players, seed 1): p2 draws the mission against p2 and gets the fallback", () => {
-    const s = start(3, 1);
+  it("self target (3 players, seed 14): p2 draws the mission against p2 and gets the fallback", () => {
+    const s = start(3, 14);
     expect(s.secret.originalMission["p2"]).toEqual({
       type: "eliminatePlayer",
       targetPlayerId: "p2",
@@ -82,14 +82,14 @@ describe("mission deal", () => {
     expect(s.secret.mission["p3"]).toEqual(s.secret.originalMission["p3"]);
   });
 
-  it("self target for two players at once (seed 17): both get the fallback, which may be shared", () => {
-    const s = start(3, 17);
-    expect(s.secret.missionReplaced).toEqual({ p1: true, p2: false, p3: true });
-    expect(s.secret.mission["p1"]).toEqual(testlandMissions.fallback);
+  it("self target for two players at once (seed 57): both get the fallback, which may be shared", () => {
+    const s = start(3, 57);
+    expect(s.secret.missionReplaced).toEqual({ p1: false, p2: true, p3: true });
+    expect(s.secret.mission["p2"]).toEqual(testlandMissions.fallback);
     expect(s.secret.mission["p3"]).toEqual(testlandMissions.fallback);
-    expect(s.secret.originalMission["p1"]).toEqual({
+    expect(s.secret.originalMission["p2"]).toEqual({
       type: "eliminatePlayer",
-      targetPlayerId: "p1",
+      targetPlayerId: "p2",
     });
     expect(s.secret.originalMission["p3"]).toEqual({
       type: "eliminatePlayer",
@@ -98,7 +98,7 @@ describe("mission deal", () => {
   });
 
   it("originalMission and mission do not share objects with the map list or each other", () => {
-    const s = start(3, 2);
+    const s = start(3, 1);
     expect(s.secret.missionReplaced).toEqual({ p1: false, p2: false, p3: false });
     const m = s.secret.mission["p1"]!;
     expect(s.secret.originalMission["p1"]).toEqual(m);

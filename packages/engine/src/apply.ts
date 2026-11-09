@@ -1,6 +1,7 @@
 import { applyAttack, applyBlitz, applyOccupy, findTerritory } from "./attack.js";
 import { mustTrade } from "./cards.js";
 import { applyFortify } from "./fortify.js";
+import { applyChooseMission } from "./mission-choice.js";
 import { applyTradeCards } from "./trade.js";
 import { endTurn } from "./turn.js";
 import { checkVictory } from "./victory.js";
@@ -21,7 +22,13 @@ export function applyAction(
   const result = applyChecked(state, playerId, action, rng);
   // Win check for the active player after every accepted action that can change ownership or armies.
   // `endPhase` changes neither (the turn-start check lives in `endTurn`), `fortify` checks before it ends the turn.
-  if (!result.ok || action.type === "endPhase" || action.type === "fortify") return result;
+  if (
+    !result.ok ||
+    action.type === "endPhase" ||
+    action.type === "fortify" ||
+    action.type === "chooseMission" // `applyChooseMission` runs the start-of-turn check itself
+  )
+    return result;
   return { ok: true, ...checkVictory(result.state, result.events) };
 }
 
@@ -31,6 +38,11 @@ function applyChecked(
   action: Action,
   rng: Rng,
 ): ActionResult {
+  // Phase `missionChoice` (plan 013): everybody chooses at the same time and nothing else is valid.
+  if (action.type === "chooseMission") return applyChooseMission(state, playerId, action);
+  if (state.phase === "missionChoice") {
+    return fail(state.winnerId !== null ? "GAME_OVER" : "WRONG_PHASE");
+  }
   if (playerId !== state.activePlayerId) return fail("NOT_YOUR_TURN");
   if (state.winnerId !== null) return fail("GAME_OVER");
   // While a conquest is waiting for its move-in, nothing but `occupy` is valid.

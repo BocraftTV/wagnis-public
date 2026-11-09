@@ -48,6 +48,8 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     return { ok: false, code: "INVALID_RULES" };
   if (rules.fortifyMoves !== 1 && rules.fortifyMoves !== 2)
     return { ok: false, code: "INVALID_RULES" };
+  if (typeof rules.missionDraft !== "boolean" || typeof rules.holdToWin !== "boolean")
+    return { ok: false, code: "INVALID_RULES" };
   // Below 5 cards a hand can lack a valid set, so a mandatory trade could get stuck (rules.md 6).
   if (!Number.isInteger(rules.cards.mustTradeAt) || rules.cards.mustTradeAt < 5)
     return { ok: false, code: "INVALID_RULES" };
@@ -63,10 +65,14 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
 
   const missionSet =
     rules.victoryMode === "missions" ? (missions ?? getMissionSet(map.id)) : undefined;
+  // The draft (two missions each, keep one) only exists in "missions" (rules.md 1.1).
+  const draft = missionSet !== undefined && rules.missionDraft;
   if (rules.victoryMode === "missions") {
     if (!missionSet || !validateMissions(map, missionSet).ok) {
       return { ok: false, code: "INVALID_MISSIONS" };
     }
+    // Two missions per player must come from the pool, none twice (rules.md 1.1).
+    if (draft && poolSize(missionSet, n) < 2 * n) return { ok: false, code: "INVALID_MISSIONS" };
   }
 
   // Place each owner's remaining start armies on random own territories (players in seat order, then neutral).
@@ -88,16 +94,19 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
   );
 
   // Missions are shuffled and dealt last, so the Rng calls above keep their order (rules.md 1.1).
-  const dealt = missionSet ? dealMissions(missionSet, playerIds, rng) : undefined;
+  const dealt = missionSet && !draft ? dealMissions(missionSet, playerIds, rng) : undefined;
+  const offers = missionSet && draft ? dealOffers(missionSet, playerIds, rng) : undefined;
+  const none = <T>(value: T): Record<PlayerId, T> =>
+    Object.fromEntries(playerIds.map((p) => [p, value]));
 
   const state: GameState = {
     mapId: map.id,
     rules,
     playerOrder,
     activePlayerId: firstPlayerId,
-    phase: "reinforce",
+    phase: draft ? "missionChoice" : "reinforce",
     turn: 1,
-    reinforcementsLeft: reinforcements,
+    reinforcementsLeft: draft ? 0 : reinforcements,
     territories,
     secret: {
       mission: dealt?.mission ?? Object.fromEntries(playerIds.map((p) => [p, null])),
@@ -105,12 +114,17 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
         dealt?.originalMission ?? Object.fromEntries(playerIds.map((p) => [p, null])),
       missionReplaced:
         dealt?.missionReplaced ?? Object.fromEntries(playerIds.map((p) => [p, false])),
+      missionOffer: offers?.offer ?? none(null),
+      missionOfferDealt: offers?.dealt ?? none(null),
+      discardedMission: none(null),
+      victoryPending: none(false),
       hand: Object.fromEntries(playerIds.map((p) => [p, []])),
       deck,
       discard: [],
     },
     pendingOccupation: null,
     conqueredThisTurn: false,
+    conquestsThisTurn: 0,
     fortifyMovesDone: 0,
     winnerId: null,
     winReason: null,
@@ -121,6 +135,8 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     lastTrade: null,
     tradeSeq: 0,
   };
+  // With the draft the first turn only starts once everybody has chosen (`startFirstTurn`, mission-choice.ts).
+  if (draft) return { ok: true, state, events: [{ type: "gameStarted", firstPlayerId }] };
   const events: GameEvent[] = [
     { type: "gameStarted", firstPlayerId },
     { type: "turnStarted", playerId: firstPlayerId, turn: 1, reinforcements },
@@ -159,4 +175,39 @@ function dealMissions(
     missionReplaced[p] = selfTarget;
   });
   return { mission, originalMission, missionReplaced };
+}
+
+/** Missions in the pool: the map's own plus one `eliminatePlayer` per player (none with 2 players). */
+function poolSize(set: MissionSet, playerCount: number): number {
+  return set.missions.length + (playerCount > 2 ? playerCount : 0);
+}
+
+/**
+ * The draft deal: the same pool and shuffle as `dealMissions`, but every player gets two (the i-th player in seat
+ * order gets the cards 2i and 2i+1). A self target in an offer is shown as the fallback, as in the plain deal
+ * (rules.md 1.1, question 43); `dealt` keeps the cards as drawn.
+ */
+function dealOffers(
+  set: MissionSet,
+  playerIds: PlayerId[],
+  rng: Rng,
+): {
+  offer: Record<PlayerId, [Mission, Mission]>;
+  dealt: Record<PlayerId, [Mission, Mission]>;
+} {
+  const pool: Mission[] = set.missions.map(cloneMission);
+  if (playerIds.length > 2) {
+    for (const p of playerIds) pool.push({ type: "eliminatePlayer", targetPlayerId: p });
+  }
+  const shuffled = shuffle(pool, rng);
+  const offer: Record<PlayerId, [Mission, Mission]> = {};
+  const dealt: Record<PlayerId, [Mission, Mission]> = {};
+  playerIds.forEach((p, i) => {
+    const drawn: [Mission, Mission] = [shuffled[2 * i]!, shuffled[2 * i + 1]!];
+    const shown = (m: Mission): Mission =>
+      m.type === "eliminatePlayer" && m.targetPlayerId === p ? cloneMission(set.fallback) : m;
+    dealt[p] = [cloneMission(drawn[0]), cloneMission(drawn[1])];
+    offer[p] = [shown(drawn[0]), shown(drawn[1])];
+  });
+  return { offer, dealt };
 }

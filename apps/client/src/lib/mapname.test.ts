@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { fortifyHint, fortifyLabel, mapLabel } from "./mapname.js";
+import {
+  fortifyHint,
+  fortifyLabel,
+  holdToWinHint,
+  holdToWinLabel,
+  mapLabel,
+  missionDraftHint,
+  missionDraftLabel,
+} from "./mapname.js";
 
 describe("mapLabel", () => {
   it("names the map and its size", () => {
@@ -15,5 +23,16 @@ describe("fortify setting texts", () => {
     expect(fortifyLabel(2)).toBe("Zwei Verschiebungen");
     expect(fortifyHint(1)).toContain("Eine Verschiebung");
     expect(fortifyHint(2)).toContain("zwei Verschiebungen");
+  });
+});
+
+describe("mission option texts (plan 013)", () => {
+  it("names both options and explains on and off", () => {
+    expect(missionDraftLabel).toBe("Zwei ziehen, eine behalten");
+    expect(holdToWinLabel).toBe("Halten bis zum nächsten Zug");
+    expect(missionDraftHint(true)).toContain("zwei Missionen");
+    expect(missionDraftHint(false)).toContain("eine Mission");
+    expect(holdToWinHint(true)).toContain("Jemand steht kurz vor dem Sieg");
+    expect(holdToWinHint(false)).toContain("sofort");
   });
 });

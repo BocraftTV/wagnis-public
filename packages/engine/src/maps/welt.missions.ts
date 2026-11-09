@@ -78,6 +78,9 @@ export const worldMissions: MissionSet = {
       count: 12,
       minArmies: 4,
     },
+    // Plan 013: count 15 > the 14 territories an owner starts with (rules.md 1.1, question 39).
+    { type: "connectedRealm", count: 15 },
+    { type: "blitzkrieg", count: 6 },
   ],
   fallback: {
     type: "holdTerritories",

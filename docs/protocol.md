@@ -65,6 +65,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
 { "type": "start" }
 { "type": "settings", "mapId": "welt", "victoryMode": "domination" }
 { "type": "settings", "fortifyMoves": 2 }
+{ "type": "settings", "missionDraft": true, "holdToWin": true }
 { "type": "host", "reqId": "h1", "action": { "type": "skipTurn", "turn": 12 } }
 { "type": "host", "reqId": "h2", "action": { "type": "removePlayer", "playerId": "9a2e…" } }
 { "type": "host", "reqId": "h3", "action": { "type": "transferHost", "playerId": "9a2e…" } }
@@ -133,6 +134,8 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
     ],
     "victoryMode": "missions",
     "fortifyMoves": 1,
+    "missionDraft": false,
+    "holdToWin": false,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -146,6 +149,9 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
       "territories": { "eisenfurt": { "ownerId": "6f1c…", "armies": 4, "maxAttackDice": 3, "maxMove": 3 } },
       "pendingOccupation": { "from": "eisenfurt", "to": "rabenhain", "min": 3, "max": 4 },
       "conqueredThisTurn": true,
+      "conquestsThisTurn": 1,
+      "victoryPending": false,
+      "missionChoice": null,
       "winnerId": null,
       "winReason": null,
       "victoryMode": "missions",
@@ -165,7 +171,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
       "deckCount": 8,
       "discardCount": 0,
       "fortify": null,
-      "secret": { "mission": null, "missionReplaced": false, "hand": [], "suggestedSets": [], "mustTrade": false },
+      "secret": { "mission": null, "missionReplaced": false, "missionOffer": null, "victoryPending": false, "missionProgress": null, "hand": [], "suggestedSets": [], "mustTrade": false },
       "handCounts": { "6f1c…": 0, "9a2e…": 0 }
     }
   }
@@ -206,6 +212,8 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
     ],
     "victoryMode": "missions",
     "fortifyMoves": 1,
+    "missionDraft": false,
+    "holdToWin": false,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -222,6 +230,9 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
       },
       "pendingOccupation": null,
       "conqueredThisTurn": false,
+      "conquestsThisTurn": 0,
+      "victoryPending": false,
+      "missionChoice": null,
       "winnerId": null,
       "winReason": null,
       "victoryMode": "missions",
@@ -244,6 +255,9 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
       "secret": {
         "mission": null,
         "missionReplaced": false,
+        "missionOffer": null,
+        "victoryPending": false,
+        "missionProgress": null,
         "hand": [
           {
             "id": "card-eisenfurt",
@@ -331,6 +345,8 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
     ],
     "victoryMode": "missions",
     "fortifyMoves": 1,
+    "missionDraft": false,
+    "holdToWin": false,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -347,6 +363,9 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
       },
       "pendingOccupation": null,
       "conqueredThisTurn": false,
+      "conquestsThisTurn": 0,
+      "victoryPending": false,
+      "missionChoice": null,
       "winnerId": null,
       "winReason": null,
       "victoryMode": "missions",
@@ -359,6 +378,9 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
       "secret": {
         "mission": null,
         "missionReplaced": false,
+        "missionOffer": null,
+        "victoryPending": false,
+        "missionProgress": null,
         "hand": [],
         "suggestedSets": [],
         "mustTrade": false
@@ -401,6 +423,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     ],
     "victoryMode": "domination",
     "fortifyMoves": 2,
+    "missionDraft": false,
+    "holdToWin": false,
     "gameNo": 2,
     "publicUrl": "http://192.0.2.10:3000",
     "game": null
@@ -415,6 +439,9 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   Tokens, Hashes, Gründe und Zeitstempel der Aktivität stehen in keinem Snapshot.
 - Plan 011, `fortifyMoves` (öffentlich, für alle gleich, `1` oder `2`): Verschiebungen pro Zug; in der Lobby die Wahl des Hosts
   (Standard `1`), im Spiel der Wert des Spielstands (`rules.fortifyMoves`).
+- Plan 013, `missionDraft` und `holdToWin` (öffentlich, für alle gleich, `boolean`): die Missions-Optionen „Zwei ziehen, eine behalten“ und „Halten bis
+  zum nächsten Zug“; in der Lobby die Wahl des Hosts (Standard `false`; Nachricht `settings`, nur Host, nur Lobby, Datenbank-Spalten
+  `rooms.mission_draft` und `rooms.hold_to_win`, Schema 5), im Spiel der Wert des Spielstands. Nur bei `victoryMode: "missions"` wirksam.
 - Phase 6b, `publicUrl` (öffentlich, für alle gleich): der Ursprung aus der optionalen Umgebungsvariable `WAGNIS_PUBLIC_URL`
   (Schema, Host, Port; nie Pfad, Raumcode, Token oder Zugangsdaten; der Server prüft und normalisiert ihn beim Start). Der Wert
   steht nur im Raumstatus `lobby`, damit der Client den QR-Code bauen kann (er hängt `/r/<Raumcode>` selbst an); im Spiel und
@@ -432,6 +459,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     offen ist; gültig ist `occupy` mit `min ≤ count ≤ max`. Bis dahin lehnt der Server alles andere mit
     `OCCUPY_PENDING` ab.
   - `conqueredThisTurn`: in diesem Zug wurde mindestens ein Gebiet erobert.
+  - `conquestsThisTurn`: Zahl der Eroberungen in diesem Zug (Plan 013; `conqueredThisTurn` ist genau dann wahr, wenn sie größer als 0 ist).
   - `winnerId`: `null` oder die Spieler-ID, sobald jemand gewonnen hat (nur noch ein Spieler übrig oder im Modus
     `"missions"` die eigene Mission erfüllt; `docs/rules.md` Abschnitt 1.2).
   - `lastCombat`: `null` oder der letzte Kampf (eine `attack`- oder `blitz`-Action). `seq` zählt Kämpfe ab 1
@@ -475,10 +503,19 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   - `secret.hand[].bonusEligible` (nur eigene Hand): das Gebiet der Karte gehört aktuell dem Besitzer (Joker: `false`);
     die Karten in `lastTrade` haben das Feld nicht.
   - `missions` (Auflösung): `null`, solange `winnerId` `null` ist und im Modus `"domination"`; danach je Spieler
-    `{ mission, originalMission }` (aktuelle Mission, und die ursprünglich zugeteilte nur dann, wenn sie ersetzt wurde,
+    `{ mission, originalMission, discarded }` (aktuelle Mission, und die ursprünglich zugeteilte nur dann, wenn sie ersetzt wurde,
     sonst `null`). Gilt für jeden Empfänger, auch bei `hello` nach Spielende und nach einem Neustart.
   - Fremde Missionen stehen vor Spielende in keiner Nachricht. Es gibt kein Event und kein öffentliches Feld für den
     Wechsel zur Ersatzmission; nur der Inhaber sieht ihn (`mission`, `missionReplaced`).
+  - Plan 013 (Rules 1.1, 1.2, 7):
+    - `victoryPending` (öffentlich, `boolean`): irgendein Spieler hält eine erfüllte Mission bis zu seinem nächsten Zug (Option „Halten bis zum
+      nächsten Zug“); kein Name. `secret.victoryPending` ist nur der eigene Merker.
+    - `missionChoice` (öffentlich): während der Phase `"missionChoice"` `{ chosen: [playerId] }` (wer schon gewählt hat, nicht was), sonst `null`.
+      `secret.missionOffer` (nur eigene): die zwei Missionen zur Wahl, solange die eigene Wahl offen ist, sonst `null`.
+    - `secret.missionProgress` (nur eigene): `{ current, target }` für `connectedRealm` und `blitzkrieg`, sonst `null`; der Client rechnet nichts selbst.
+    - `missions[].discarded`: nach Spielende die abgeworfene Mission (nur mit „Zwei ziehen“), sonst `null`; vorher in keinem Snapshot.
+    - Action `{ "type": "chooseMission", "index": 0 | 1 }`: in der Phase `missionChoice` von jedem Spieler (nicht nur dem aktiven), endgültig. Fehler:
+      `WRONG_PHASE`, `ALREADY_CHOSEN`, `INVALID_CHOICE` (Index nicht 0 oder 1 wird schon vom Schema als `BAD_MESSAGE` abgelehnt).
   - Der Spielstand-Version `stateVersion` ist intern und steht in keiner Nachricht.
   - Beispiele (Ausschnitte, die über `"example"` benannt sind; `game` ergänzt einen Basis-Snapshot, die Felder
     darin ersetzen die des Basis-Snapshots):
@@ -522,6 +559,9 @@ ist als entfernte Spielerin aus der Liste verschwunden):
         "extraContinents": 1
       },
       "missionReplaced": false,
+      "missionOffer": null,
+      "victoryPending": false,
+      "missionProgress": null,
       "hand": [],
       "suggestedSets": [],
       "mustTrade": false
@@ -537,6 +577,9 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     "secret": {
       "mission": { "type": "holdTerritories", "count": 5, "minArmies": 2 },
       "missionReplaced": false,
+      "missionOffer": null,
+      "victoryPending": false,
+      "missionProgress": null,
       "hand": [],
       "suggestedSets": [],
       "mustTrade": false
@@ -552,6 +595,9 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     "secret": {
       "mission": { "type": "eliminatePlayer", "targetPlayerId": "9a2e…" },
       "missionReplaced": false,
+      "missionOffer": null,
+      "victoryPending": false,
+      "missionProgress": null,
       "hand": [],
       "suggestedSets": [],
       "mustTrade": false
@@ -567,6 +613,9 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     "secret": {
       "mission": { "type": "holdTerritories", "count": 6, "minArmies": 2 },
       "missionReplaced": true,
+      "missionOffer": null,
+      "victoryPending": false,
+      "missionProgress": null,
       "hand": [],
       "suggestedSets": [],
       "mustTrade": false
@@ -586,11 +635,13 @@ Auflösung nach Spielende (Anna hat ihre Mission behalten, Ben bekam die Ersatzm
     "missions": {
       "6f1c…": {
         "mission": { "type": "eliminatePlayer", "targetPlayerId": "9a2e…" },
-        "originalMission": null
+        "originalMission": null,
+        "discarded": null
       },
       "9a2e…": {
         "mission": { "type": "holdTerritories", "count": 6, "minArmies": 2 },
-        "originalMission": { "type": "eliminatePlayer", "targetPlayerId": "9a2e…" }
+        "originalMission": { "type": "eliminatePlayer", "targetPlayerId": "9a2e…" },
+        "discarded": null
       }
     }
   }
@@ -610,11 +661,13 @@ Fall daran, es gibt kein zusätzliches Feld):
     "missions": {
       "6f1c…": {
         "mission": { "type": "holdTerritories", "count": 5, "minArmies": 2 },
-        "originalMission": null
+        "originalMission": null,
+        "discarded": null
       },
       "9a2e…": {
         "mission": { "type": "holdTerritories", "count": 6, "minArmies": 2 },
-        "originalMission": { "type": "eliminatePlayer", "targetPlayerId": "9a2e…" }
+        "originalMission": { "type": "eliminatePlayer", "targetPlayerId": "9a2e…" },
+        "discarded": null
       }
     }
   }

@@ -5,6 +5,7 @@ import {
   createSeededRng,
   migrate3to4,
   migrate4to5,
+  migrate6to7,
   migrate5to6,
   migrateState,
   normalizeState,
@@ -36,6 +37,13 @@ function phase6a(s: GameState): Record<string, any> {
   const legacy = JSON.parse(JSON.stringify(s)) as Record<string, any>;
   delete legacy["fortifyMovesDone"];
   delete legacy["rules"].fortifyMoves;
+  delete legacy["conquestsThisTurn"];
+  delete legacy["rules"].missionDraft;
+  delete legacy["rules"].holdToWin;
+  delete legacy["secret"].missionOffer;
+  delete legacy["secret"].missionOfferDealt;
+  delete legacy["secret"].discardedMission;
+  delete legacy["secret"].victoryPending;
   legacy["stateVersion"] = 5;
   return legacy;
 }
@@ -72,14 +80,14 @@ function phase2(s: GameState): Record<string, any> {
 }
 
 describe("migrateState", () => {
-  it("STATE_VERSION is 6", () => expect(STATE_VERSION).toBe(6));
+  it("STATE_VERSION is 7", () => expect(STATE_VERSION).toBe(7));
 
-  it("turns an unversioned phase 3 state into version 6 as domination", () => {
+  it("turns an unversioned phase 3 state into version 7 as domination", () => {
     const old = phase3(fresh());
     const r = migrateState(old, noRng);
     if (!r.ok) throw new Error(r.code);
     expect(r.migrated).toBe(true);
-    expect(r.state.stateVersion).toBe(6);
+    expect(r.state.stateVersion).toBe(7);
     expect(r.state.removedPlayerIds).toEqual([]);
     expect(r.state.rules.fortifyMoves).toBe(1);
     expect(r.state.fortifyMovesDone).toBe(0);
@@ -94,6 +102,7 @@ describe("migrateState", () => {
       winReason: _w,
       removedPlayerIds: _p,
       fortifyMovesDone: _f,
+      conquestsThisTurn: _c,
       ...rest
     } = r.state;
     const { rules: _r, secret: _s, ...restOld } = old;
@@ -109,12 +118,12 @@ describe("migrateState", () => {
     expect(running.ok && running.state.winReason).toBeNull();
   });
 
-  it("an unversioned phase 2 state goes through normalizeState (-> 3), then 3 -> 4, 4 -> 5 and 5 -> 6", () => {
+  it("an unversioned phase 2 state goes through normalizeState (-> 3), then 3 -> 4, 4 -> 5, 5 -> 6 and 6 -> 7", () => {
     const old = phase2(fresh());
     const r = migrateState(old, createSeededRng(2));
     if (!r.ok) throw new Error(r.code);
     expect(r.migrated).toBe(true);
-    expect(r.state.stateVersion).toBe(6);
+    expect(r.state.stateVersion).toBe(7);
     expect(r.state.rules.victoryMode).toBe("domination");
     expect(r.state.rules.fortifyMoves).toBe(1);
     expect(r.state.secret.deck).toHaveLength(10);
@@ -132,7 +141,7 @@ describe("migrateState", () => {
     // explicit version 3 skips the first step and uses no Rng
     const explicit = migrateState({ ...v3, stateVersion: 3 }, noRng);
     expect(explicit.ok && explicit.migrated).toBe(true);
-    expect(explicit.ok && explicit.state.stateVersion).toBe(6);
+    expect(explicit.ok && explicit.state.stateVersion).toBe(7);
   });
 
   it("4 -> 5 adds removedPlayerIds: [] and nothing else, without the Rng and without touching the input", () => {
@@ -142,14 +151,14 @@ describe("migrateState", () => {
     if (!r.ok) throw new Error(r.code);
     expect(r.migrated).toBe(true);
     expect(v4).toEqual(copy);
-    expect(r.state.stateVersion).toBe(6);
+    expect(r.state.stateVersion).toBe(7);
     expect(r.state.removedPlayerIds).toEqual([]);
     expect(r.state.fortifyMovesDone).toBe(0);
     expect(r.state.rules.fortifyMoves).toBe(1);
     // the step on its own
     const direct = migrate4to5(copy as never);
     expect(direct).toEqual({ ...copy, removedPlayerIds: [], stateVersion: 5 });
-    expect(migrate5to6(direct)).toEqual(r.state);
+    expect(migrate6to7(migrate5to6(direct))).toEqual(r.state);
   });
 
   it("5 -> 6 sets fortifyMoves 1 and fortifyMovesDone 0 and nothing else, without the Rng and without touching the input", () => {
@@ -159,19 +168,64 @@ describe("migrateState", () => {
     if (!r.ok) throw new Error(r.code);
     expect(r.migrated).toBe(true);
     expect(v5).toEqual(copy);
-    expect(r.state.stateVersion).toBe(6);
+    expect(r.state.stateVersion).toBe(7);
     expect(r.state.rules.fortifyMoves).toBe(1);
     expect(r.state.fortifyMovesDone).toBe(0);
     expect(r.state.removedPlayerIds).toEqual(["b"]);
-    const { fortifyMovesDone: _d, stateVersion: _s, rules, ...rest } = r.state;
-    const { fortifyMoves: _m, ...rulesRest } = rules;
-    const { stateVersion: _o, rules: oldRules, ...restOld } = copy;
+    const {
+      fortifyMovesDone: _d,
+      stateVersion: _s,
+      rules,
+      secret,
+      conquestsThisTurn: _c,
+      ...rest
+    } = r.state;
+    const { fortifyMoves: _m, missionDraft: _md, holdToWin: _hw, ...rulesRest } = rules;
+    const {
+      missionOffer: _mo,
+      missionOfferDealt: _mod,
+      discardedMission: _dm,
+      victoryPending: _vp,
+      ...secretRest
+    } = secret;
+    const { stateVersion: _o, rules: oldRules, secret: oldSecret, ...restOld } = copy;
     expect(rest).toEqual(restOld);
     expect(rulesRest).toEqual(oldRules);
-    expect(migrate5to6(copy as never)).toEqual(r.state);
+    expect(secretRest).toEqual(oldSecret);
+    expect(migrate6to7(migrate5to6(copy as never))).toEqual(r.state);
   });
 
-  it("a version 6 state is returned as it is, even with removed players, and not migrated", () => {
+  it("6 -> 7 adds the plan 013 fields with their old values and nothing else, without the Rng", () => {
+    const base = { ...fresh(), conqueredThisTurn: true, conquestsThisTurn: 1 };
+    const v6: Record<string, any> = JSON.parse(JSON.stringify(base));
+    delete v6["conquestsThisTurn"];
+    delete v6["rules"].missionDraft;
+    delete v6["rules"].holdToWin;
+    delete v6["secret"].missionOffer;
+    delete v6["secret"].missionOfferDealt;
+    delete v6["secret"].discardedMission;
+    delete v6["secret"].victoryPending;
+    v6["stateVersion"] = 6;
+    const copy = structuredClone(v6);
+    const r = migrateState(v6, noRng);
+    if (!r.ok) throw new Error(r.code);
+    expect(r.migrated).toBe(true);
+    expect(v6).toEqual(copy);
+    expect(r.state.stateVersion).toBe(7);
+    expect(r.state.conquestsThisTurn).toBe(1);
+    expect(r.state.rules.missionDraft).toBe(false);
+    expect(r.state.rules.holdToWin).toBe(false);
+    expect(r.state.secret.missionOffer).toEqual({ a: null, b: null, c: null });
+    expect(r.state.secret.missionOfferDealt).toEqual({ a: null, b: null, c: null });
+    expect(r.state.secret.discardedMission).toEqual({ a: null, b: null, c: null });
+    expect(r.state.secret.victoryPending).toEqual({ a: false, b: false, c: false });
+    expect(r.state).toEqual(base);
+    expect(migrateState({ ...v6, conqueredThisTurn: false }, noRng)).toMatchObject({
+      state: { conquestsThisTurn: 0 },
+    });
+  });
+
+  it("a version 7 state is returned as it is, even with removed players, and not migrated", () => {
     const s = { ...fresh(), removedPlayerIds: ["b"] };
     const r = migrateState(s, noRng);
     expect(r).toEqual({ ok: true, state: s, migrated: false });
@@ -204,7 +258,7 @@ describe("migrateState", () => {
     expect(old).toEqual(copy);
   });
 
-  it("a version 6 state keeps fortifyMoves 2 and a counter of 1 and is not migrated", () => {
+  it("a version 7 state keeps fortifyMoves 2 and a counter of 1 and is not migrated", () => {
     const s = fresh();
     const two = {
       ...s,
@@ -216,7 +270,7 @@ describe("migrateState", () => {
   });
 
   it("a newer version is STATE_VERSION_UNSUPPORTED and the input stays untouched", () => {
-    const s = { ...fresh(), stateVersion: 7 };
+    const s = { ...fresh(), stateVersion: 8 };
     const copy = structuredClone(s);
     expect(migrateState(s, noRng)).toEqual({ ok: false, code: "STATE_VERSION_UNSUPPORTED" });
     expect(s).toEqual(copy);

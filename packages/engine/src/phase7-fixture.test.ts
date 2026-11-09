@@ -43,7 +43,7 @@ describe("Phase-7 states from the real server (plan 011, step 0)", () => {
   });
 
   it.each(withState.map((r) => [r.label] as const))(
-    "%s: is a version 5 state; loading migrates it to 6 without the Rng",
+    "%s: is a version 5 state; loading migrates it to 7 without the Rng",
     (label) => {
       const stored = raw(label);
       expect(stored["stateVersion"]).toBe(5);
@@ -56,10 +56,25 @@ describe("Phase-7 states from the real server (plan 011, step 0)", () => {
       expect(loaded.state.rules.fortifyMoves).toBe(1);
       expect(loaded.state.fortifyMovesDone).toBe(0);
       // everything else is as stored
-      const { stateVersion: _v, fortifyMovesDone: _d, rules, ...rest } = loaded.state;
-      const { fortifyMoves: _m, ...rulesRest } = rules;
-      const { stateVersion: _o, rules: rawRules, ...restRaw } = stored;
+      const {
+        stateVersion: _v,
+        fortifyMovesDone: _d,
+        conquestsThisTurn: _c,
+        rules,
+        secret,
+        ...rest
+      } = loaded.state;
+      const { fortifyMoves: _m, missionDraft: _md, holdToWin: _hw, ...rulesRest } = rules;
+      const {
+        missionOffer: _mo,
+        missionOfferDealt: _mod,
+        discardedMission: _dm,
+        victoryPending: _vp,
+        ...secretRest
+      } = secret;
+      const { stateVersion: _o, rules: rawRules, secret: rawSecret, ...restRaw } = stored;
       expect(rest).toEqual(restRaw);
+      expect(secretRest).toEqual(rawSecret);
       expect(rulesRest).toEqual(rawRules);
       const again = migrateState(JSON.parse(JSON.stringify(loaded.state)), noRng);
       expect(again.ok && again.migrated).toBe(false);

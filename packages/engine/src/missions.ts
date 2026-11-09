@@ -44,7 +44,37 @@ export function isMissionMet(
     }
     case "eliminatePlayer":
       return isEliminated(state, mission.targetPlayerId);
+    case "connectedRealm":
+      return largestRealm(state, map, playerId) >= mission.count;
+    case "blitzkrieg":
+      // The counter belongs to the active player; nobody else can have it met.
+      return playerId === state.activePlayerId && state.conquestsThisTurn >= mission.count;
   }
+}
+
+/** Size of the largest group of own territories that are linked by neighbours (land or sea); breadth-first over own ground only. */
+export function largestRealm(state: GameState, map: MapDefinition, playerId: PlayerId): number {
+  const neighbors = new Map(map.territories.map((t) => [t.id, t.neighbors]));
+  const seen = new Set<string>();
+  let best = 0;
+  for (const t of map.territories) {
+    if (seen.has(t.id) || state.territories[t.id]?.ownerId !== playerId) continue;
+    let size = 0;
+    const queue = [t.id];
+    seen.add(t.id);
+    while (queue.length > 0) {
+      const id = queue.pop()!;
+      size++;
+      for (const n of neighbors.get(id) ?? []) {
+        if (!seen.has(n) && state.territories[n]?.ownerId === playerId) {
+          seen.add(n);
+          queue.push(n);
+        }
+      }
+    }
+    best = Math.max(best, size);
+  }
+  return best;
 }
 
 /** Whether the player's current mission is met; false without a mission (`"domination"`). */
@@ -78,5 +108,18 @@ export function replaceTargetMissions(
     mission[q] = cloneMission(fallback);
     replaced[q] = true;
   }
-  return { ...state, secret: { ...state.secret, mission, missionReplaced: replaced } };
+  // Open offers of the mission draft (plan 013): a card aimed at the target becomes the fallback in the offer too;
+  // `missionOfferDealt` keeps the card as drawn.
+  const offer = { ...state.secret.missionOffer };
+  for (const q of state.playerOrder) {
+    const o = offer[q];
+    if (!o) continue;
+    const swap = (m: Mission): Mission =>
+      m.type === "eliminatePlayer" && m.targetPlayerId === targetId ? cloneMission(fallback) : m;
+    offer[q] = [swap(o[0]), swap(o[1])];
+  }
+  return {
+    ...state,
+    secret: { ...state.secret, mission, missionReplaced: replaced, missionOffer: offer },
+  };
 }

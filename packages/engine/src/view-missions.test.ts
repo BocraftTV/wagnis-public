@@ -108,10 +108,10 @@ describe("viewFor: missions are secret", () => {
       map: testland,
       rules: testlandRules,
       playerIds: ["p1", "p2", "p3"],
-      rng: createSeededRng(1),
+      rng: createSeededRng(14),
     });
     if (!self.ok) throw new Error(self.code);
-    expect(self.state.secret.missionReplaced["p2"]).toBe(true); // seed 1: p2 drew the mission against p2
+    expect(self.state.secret.missionReplaced["p2"]).toBe(true); // seed 14: p2 drew the mission against p2
     for (const state of [s, switched, self.state]) {
       for (const who of [...state.playerOrder, "nobody"]) {
         const view = viewFor(state, who);
@@ -155,9 +155,13 @@ describe("viewFor: the resolution after the game", () => {
       const v = viewFor(done, who);
       expect(v.winReason).toBe("mission");
       expect(v.missions).toEqual({
-        a: { mission: kill("b"), originalMission: null },
-        b: { mission: hold(6, 3), originalMission: null },
-        c: { mission: testlandMissionsFallback(), originalMission: kill("b") },
+        a: { mission: kill("b"), originalMission: null, discarded: null },
+        b: { mission: hold(6, 3), originalMission: null, discarded: null },
+        c: {
+          mission: testlandMissionsFallback(),
+          originalMission: kill("b"),
+          discarded: null,
+        },
       });
     }
   });
@@ -167,7 +171,7 @@ describe("viewFor: the resolution after the game", () => {
       map: testland,
       rules: testlandRules,
       playerIds: ["p1", "p2", "p3"],
-      rng: createSeededRng(1),
+      rng: createSeededRng(14),
     });
     if (!self.ok) throw new Error(self.code);
     const over: GameState = { ...self.state, winnerId: "p1", winReason: "mission" };
@@ -276,6 +280,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "activePlayerId",
         "combatSeq",
         "conqueredThisTurn",
+        "conquestsThisTurn",
         "fortifyMovesDone",
         "lastCombat",
         "lastTrade",
@@ -298,7 +303,18 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
   });
   it("secret keys", () => {
     expect(Object.keys(state.secret).sort()).toEqual(
-      ["deck", "discard", "hand", "mission", "missionReplaced", "originalMission"].sort(),
+      [
+        "deck",
+        "discard",
+        "discardedMission",
+        "hand",
+        "mission",
+        "missionOffer",
+        "missionOfferDealt",
+        "missionReplaced",
+        "originalMission",
+        "victoryPending",
+      ].sort(),
     );
   });
   it("view and secret view keys", () => {
@@ -307,6 +323,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
       [
         "activePlayerId",
         "conqueredThisTurn",
+        "conquestsThisTurn",
         "deckCount",
         "discardCount",
         "fortify",
@@ -314,6 +331,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "lastCombat",
         "lastTrade",
         "mapId",
+        "missionChoice",
         "missions",
         "pendingOccupation",
         "phase",
@@ -324,6 +342,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "territories",
         "turn",
         "victoryMode",
+        "victoryPending",
         "winReason",
         "winnerId",
       ].sort(),
@@ -331,16 +350,19 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
     expect(Object.keys(v.secret).sort()).toEqual([
       "hand",
       "mission",
+      "missionOffer",
+      "missionProgress",
       "missionReplaced",
       "mustTrade",
       "suggestedSets",
+      "victoryPending",
     ]);
   });
   it("resolution keys", () => {
     const over: GameState = { ...state, winnerId: "p1", winReason: "mission" };
     const reveal = viewFor(over, "p1").missions!;
     for (const entry of Object.values(reveal)) {
-      expect(Object.keys(entry).sort()).toEqual(["mission", "originalMission"]);
+      expect(Object.keys(entry).sort()).toEqual(["discarded", "mission", "originalMission"]);
     }
   });
 });

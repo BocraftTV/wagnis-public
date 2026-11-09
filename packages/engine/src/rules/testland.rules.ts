@@ -1,5 +1,11 @@
 import type { RuleConfig } from "../types.js";
-import { defaultCardRules, defaultFortifyMoves, defaultFortifyReach } from "./defaults.js";
+import {
+  defaultCardRules,
+  defaultFortifyMoves,
+  defaultFortifyReach,
+  defaultHoldToWin,
+  defaultMissionDraft,
+} from "./defaults.js";
 
 export const testlandRules: RuleConfig = {
   startArmies: { 2: 8, 3: 7, 4: 6, 5: 5, 6: 4 },
@@ -8,6 +14,8 @@ export const testlandRules: RuleConfig = {
   initialPlacement: "auto",
   fortifyReach: defaultFortifyReach,
   fortifyMoves: defaultFortifyMoves,
+  missionDraft: defaultMissionDraft,
+  holdToWin: defaultHoldToWin,
   cards: defaultCardRules,
   victoryMode: "missions",
 };

@@ -171,10 +171,10 @@ describe("createGame card rules", () => {
     const r = createGame({ map: testland, rules: testlandRules, playerIds: ["p1", "p2"], rng });
     expect(r.ok).toBe(true);
     // 8 territories: shuffle 7 calls (8..2), then the army placements, the start player int(2), the deck
-    // shuffle (10 cards: 10..2) and last the mission shuffle (2 players: 6 map missions, 6..2).
+    // shuffle (10 cards: 10..2) and last the mission shuffle (2 players: 8 map missions, 8..2).
     const n = calls.length;
-    expect(calls.slice(n - 5)).toEqual([6, 5, 4, 3, 2]);
-    expect(calls.slice(n - 14, n - 5)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2]);
-    expect(calls[n - 15]).toBe(2);
+    expect(calls.slice(n - 7)).toEqual([8, 7, 6, 5, 4, 3, 2]);
+    expect(calls.slice(n - 16, n - 7)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2]);
+    expect(calls[n - 17]).toBe(2);
   });
 });

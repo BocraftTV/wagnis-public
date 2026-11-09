@@ -19,6 +19,7 @@ import type {
   Rng,
   RuleConfig,
 } from "./index.js";
+import { pendingChoosers } from "./index.js";
 
 export interface Step {
   /** State before the action, the action, and its outcome. */
@@ -159,8 +160,13 @@ export function playRandomGame(opts: PlayOptions): { start: GameState; steps: St
       state = r.state;
       continue;
     }
-    const action = chooseAction(state, bot, opts.aggression ?? 0.9, map);
-    const playerId = state.activePlayerId;
+    // In phase `missionChoice` a random player who has not chosen yet picks one of the two missions.
+    const pending = state.phase === "missionChoice" ? pendingChoosers(state) : [];
+    const playerId = pending.length > 0 ? pending[bot.int(pending.length)]! : state.activePlayerId;
+    const action: Action =
+      pending.length > 0
+        ? { type: "chooseMission", index: bot.int(2) === 0 ? 0 : 1 }
+        : chooseAction(state, bot, opts.aggression ?? 0.9, map);
     const r = applyAction(state, playerId, action, rng);
     if (!r.ok) throw new Error(`seed ${opts.seed}: ${JSON.stringify(action)} rejected: ${r.code}`);
     steps.push({ before: state, playerId, action, after: r.state, events: r.events });

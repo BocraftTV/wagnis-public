@@ -1,0 +1,968 @@
+{
+  "schemaMetaVersion": 4,
+  "rooms": [
+    {
+      "label": "lobby",
+      "room": {
+        "id": "7NHAJV",
+        "status": "lobby",
+        "state_json": null,
+        "map_id": "testland",
+        "version": 2,
+        "created_at": 1794237272580,
+        "updated_at": 1794237272610,
+        "victory_mode": "domination",
+        "game_no": 1,
+        "last_activity_at": 1794237272627,
+        "fortify_moves": 2
+      },
+      "players": [
+        {
+          "id": "972cd77d-a03d-4cca-9d6c-208d2536043f",
+          "room_id": "7NHAJV",
+          "name": "Anna",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-lobby-0",
+          "seat": 0,
+          "is_host": 1,
+          "removed": 0
+        },
+        {
+          "id": "32082b11-d0e4-4d81-b46d-70edd9a0c26a",
+          "room_id": "7NHAJV",
+          "name": "Ben",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-lobby-1",
+          "seat": 1,
+          "is_host": 0,
+          "removed": 0
+        }
+      ]
+    },
+    {
+      "label": "playing-3p-welt-reinforce",
+      "room": {
+        "id": "MWU7GB",
+        "status": "playing",
+        "state_json": {
+          "mapId": "welt",
+          "rules": {
+            "startArmies": {
+              "2": 40,
+              "3": 35,
+              "4": 30,
+              "5": 25,
+              "6": 20
+            },
+            "minReinforcement": 3,
+            "territoryDivisor": 3,
+            "initialPlacement": "auto",
+            "fortifyReach": "connected",
+            "fortifyMoves": 1,
+            "cards": {
+              "jokers": 2,
+              "tradeValues": {
+                "infantry": 4,
+                "cavalry": 6,
+                "artillery": 8,
+                "mixed": 10
+              },
+              "territoryBonus": 2,
+              "mustTradeAt": 5
+            },
+            "victoryMode": "missions"
+          },
+          "playerOrder": [
+            "3f42944e-c0b9-4955-9b61-7681a189a073",
+            "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+            "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6"
+          ],
+          "activePlayerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+          "phase": "reinforce",
+          "turn": 2,
+          "reinforcementsLeft": 6,
+          "territories": {
+            "subkontinent": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 2
+            },
+            "ostsibirien": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 2
+            },
+            "nebelinseln": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 4
+            },
+            "mittelland": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 3
+            },
+            "praerieland": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 4
+            },
+            "kernland": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 4
+            },
+            "atlantikkueste": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 4
+            },
+            "orinokoland": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 3
+            },
+            "nordlande": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 1
+            },
+            "japan": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 3
+            },
+            "kongobecken": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 1
+            },
+            "osteuropa": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 1
+            },
+            "hinterindien": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 4
+            },
+            "mexiko": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 8
+            },
+            "atlantikmark": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 2
+            },
+            "landenge": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 1
+            },
+            "amazonien": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 3
+            },
+            "nordostkueste": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 3
+            },
+            "iranhochland": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 1
+            },
+            "zweistromland": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 2
+            },
+            "antillen": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 3
+            },
+            "suedspitze": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 2
+            },
+            "mongolei": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 2
+            },
+            "nilland": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 1
+            },
+            "suedkegel": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 1
+            },
+            "neuguinea": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 3
+            },
+            "adriaraum": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 3
+            },
+            "ostafrika": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 2
+            },
+            "sundainseln": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 1
+            },
+            "groenland": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 2
+            },
+            "westsibirien": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 1
+            },
+            "hudsonland": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 2
+            },
+            "pazifikkueste": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 2
+            },
+            "hochasien": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 2
+            },
+            "turan": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 3
+            },
+            "atlasland": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 2
+            },
+            "nordwestland": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 4
+            },
+            "anatolien": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 4
+            },
+            "sahelguertel": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 3
+            },
+            "wuestenhalbinsel": {
+              "ownerId": "3f42944e-c0b9-4955-9b61-7681a189a073",
+              "armies": 1
+            },
+            "suedland": {
+              "ownerId": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+              "armies": 3
+            },
+            "hochanden": {
+              "ownerId": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+              "armies": 4
+            }
+          },
+          "secret": {
+            "mission": {
+              "3f42944e-c0b9-4955-9b61-7681a189a073": {
+                "type": "conquerContinents",
+                "continentIds": ["europa", "afrika"],
+                "extraContinents": 1
+              },
+              "20cceba9-62e3-44b4-a1fa-23b9fed98260": {
+                "type": "conquerContinents",
+                "continentIds": ["nordamerika", "suedamerika", "karibischer-bogen"],
+                "extraContinents": 1
+              },
+              "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6": {
+                "type": "conquerContinents",
+                "continentIds": ["asien", "europa"],
+                "extraContinents": 0
+              }
+            },
+            "originalMission": {
+              "3f42944e-c0b9-4955-9b61-7681a189a073": {
+                "type": "conquerContinents",
+                "continentIds": ["europa", "afrika"],
+                "extraContinents": 1
+              },
+              "20cceba9-62e3-44b4-a1fa-23b9fed98260": {
+                "type": "conquerContinents",
+                "continentIds": ["nordamerika", "suedamerika", "karibischer-bogen"],
+                "extraContinents": 1
+              },
+              "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6": {
+                "type": "conquerContinents",
+                "continentIds": ["asien", "europa"],
+                "extraContinents": 0
+              }
+            },
+            "missionReplaced": {
+              "3f42944e-c0b9-4955-9b61-7681a189a073": false,
+              "20cceba9-62e3-44b4-a1fa-23b9fed98260": false,
+              "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6": false
+            },
+            "hand": {
+              "3f42944e-c0b9-4955-9b61-7681a189a073": ["card-ostafrika"],
+              "20cceba9-62e3-44b4-a1fa-23b9fed98260": [],
+              "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6": []
+            },
+            "deck": [
+              "card-mittelland",
+              "card-osteuropa",
+              "card-hochasien",
+              "card-sundainseln",
+              "card-praerieland",
+              "card-orinokoland",
+              "card-iranhochland",
+              "card-subkontinent",
+              "card-wuestenhalbinsel",
+              "card-atlantikmark",
+              "card-suedland",
+              "card-hochanden",
+              "card-atlantikkueste",
+              "card-suedspitze",
+              "card-amazonien",
+              "card-kernland",
+              "card-ostsibirien",
+              "card-westsibirien",
+              "card-joker-2",
+              "card-landenge",
+              "card-hudsonland",
+              "card-suedkegel",
+              "card-anatolien",
+              "card-kongobecken",
+              "card-antillen",
+              "card-nilland",
+              "card-hinterindien",
+              "card-nordostkueste",
+              "card-joker-1",
+              "card-zweistromland",
+              "card-nebelinseln",
+              "card-atlasland",
+              "card-pazifikkueste",
+              "card-sahelguertel",
+              "card-nordwestland",
+              "card-adriaraum",
+              "card-groenland",
+              "card-mexiko",
+              "card-japan",
+              "card-neuguinea",
+              "card-nordlande",
+              "card-mongolei",
+              "card-turan"
+            ],
+            "discard": []
+          },
+          "pendingOccupation": null,
+          "conqueredThisTurn": false,
+          "fortifyMovesDone": 0,
+          "winnerId": null,
+          "winReason": null,
+          "removedPlayerIds": [],
+          "stateVersion": 6,
+          "lastCombat": null,
+          "combatSeq": 1,
+          "lastTrade": null,
+          "tradeSeq": 0
+        },
+        "map_id": "welt",
+        "version": 12,
+        "created_at": 1794237272728,
+        "updated_at": 1794237272894,
+        "victory_mode": "missions",
+        "game_no": 1,
+        "last_activity_at": 1794237272912,
+        "fortify_moves": 1
+      },
+      "players": [
+        {
+          "id": "3f42944e-c0b9-4955-9b61-7681a189a073",
+          "room_id": "MWU7GB",
+          "name": "Anna",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-playing-3p-welt-reinforce-0",
+          "seat": 0,
+          "is_host": 1,
+          "removed": 0
+        },
+        {
+          "id": "20cceba9-62e3-44b4-a1fa-23b9fed98260",
+          "room_id": "MWU7GB",
+          "name": "Ben",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-playing-3p-welt-reinforce-1",
+          "seat": 1,
+          "is_host": 0,
+          "removed": 0
+        },
+        {
+          "id": "d7b67ffe-e21c-4b79-8884-ca1791c9a7d6",
+          "room_id": "MWU7GB",
+          "name": "Cleo",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-playing-3p-welt-reinforce-2",
+          "seat": 2,
+          "is_host": 0,
+          "removed": 0
+        }
+      ]
+    },
+    {
+      "label": "playing-2p-neutral-fortify",
+      "room": {
+        "id": "PYX3JG",
+        "status": "playing",
+        "state_json": {
+          "mapId": "testland",
+          "rules": {
+            "startArmies": {
+              "2": 8,
+              "3": 7,
+              "4": 6,
+              "5": 5,
+              "6": 4
+            },
+            "minReinforcement": 3,
+            "territoryDivisor": 3,
+            "initialPlacement": "auto",
+            "fortifyReach": "connected",
+            "fortifyMoves": 1,
+            "cards": {
+              "jokers": 2,
+              "tradeValues": {
+                "infantry": 4,
+                "cavalry": 6,
+                "artillery": 8,
+                "mixed": 10
+              },
+              "territoryBonus": 2,
+              "mustTradeAt": 5
+            },
+            "victoryMode": "missions"
+          },
+          "playerOrder": [
+            "5f9f27c0-2372-4b48-9567-577cb2d2205e",
+            "487e7b53-5532-4e7a-997e-ca60e7ac8db7"
+          ],
+          "activePlayerId": "487e7b53-5532-4e7a-997e-ca60e7ac8db7",
+          "phase": "fortify",
+          "turn": 2,
+          "reinforcementsLeft": 0,
+          "territories": {
+            "rabenhain": {
+              "ownerId": "487e7b53-5532-4e7a-997e-ca60e7ac8db7",
+              "armies": 1
+            },
+            "kupferstadt": {
+              "ownerId": "5f9f27c0-2372-4b48-9567-577cb2d2205e",
+              "armies": 2
+            },
+            "dornental": {
+              "ownerId": null,
+              "armies": 3
+            },
+            "salzmoor": {
+              "ownerId": "487e7b53-5532-4e7a-997e-ca60e7ac8db7",
+              "armies": 1
+            },
+            "nebelkueste": {
+              "ownerId": "5f9f27c0-2372-4b48-9567-577cb2d2205e",
+              "armies": 1
+            },
+            "eisenfurt": {
+              "ownerId": null,
+              "armies": 5
+            },
+            "grauwacht": {
+              "ownerId": "5f9f27c0-2372-4b48-9567-577cb2d2205e",
+              "armies": 4
+            },
+            "tannenfeld": {
+              "ownerId": "487e7b53-5532-4e7a-997e-ca60e7ac8db7",
+              "armies": 6
+            }
+          },
+          "secret": {
+            "mission": {
+              "487e7b53-5532-4e7a-997e-ca60e7ac8db7": {
+                "type": "holdTerritories",
+                "count": 5,
+                "minArmies": 2
+              },
+              "5f9f27c0-2372-4b48-9567-577cb2d2205e": {
+                "type": "conquerContinents",
+                "continentIds": [],
+                "extraContinents": 1
+              }
+            },
+            "originalMission": {
+              "487e7b53-5532-4e7a-997e-ca60e7ac8db7": {
+                "type": "holdTerritories",
+                "count": 5,
+                "minArmies": 2
+              },
+              "5f9f27c0-2372-4b48-9567-577cb2d2205e": {
+                "type": "conquerContinents",
+                "continentIds": [],
+                "extraContinents": 1
+              }
+            },
+            "missionReplaced": {
+              "487e7b53-5532-4e7a-997e-ca60e7ac8db7": false,
+              "5f9f27c0-2372-4b48-9567-577cb2d2205e": false
+            },
+            "hand": {
+              "487e7b53-5532-4e7a-997e-ca60e7ac8db7": [],
+              "5f9f27c0-2372-4b48-9567-577cb2d2205e": ["card-joker-2"]
+            },
+            "deck": [
+              "card-nebelkueste",
+              "card-eisenfurt",
+              "card-salzmoor",
+              "card-dornental",
+              "card-grauwacht",
+              "card-joker-1",
+              "card-kupferstadt",
+              "card-rabenhain",
+              "card-tannenfeld"
+            ],
+            "discard": []
+          },
+          "pendingOccupation": null,
+          "conqueredThisTurn": true,
+          "fortifyMovesDone": 0,
+          "winnerId": null,
+          "winReason": null,
+          "removedPlayerIds": [],
+          "stateVersion": 6,
+          "lastCombat": {
+            "seq": 2,
+            "attackerId": "487e7b53-5532-4e7a-997e-ca60e7ac8db7",
+            "defenderId": "5f9f27c0-2372-4b48-9567-577cb2d2205e",
+            "from": "rabenhain",
+            "to": "tannenfeld",
+            "rolls": [
+              {
+                "attackerDice": [3, 3, 2],
+                "defenderDice": [1],
+                "attackerLosses": 0,
+                "defenderLosses": 1
+              }
+            ],
+            "summary": {
+              "rollCount": 1,
+              "attackerLosses": 0,
+              "defenderLosses": 1,
+              "conquered": true
+            }
+          },
+          "combatSeq": 2,
+          "lastTrade": null,
+          "tradeSeq": 0
+        },
+        "map_id": "testland",
+        "version": 17,
+        "created_at": 1794237273012,
+        "updated_at": 1794237273263,
+        "victory_mode": "missions",
+        "game_no": 1,
+        "last_activity_at": 1794237273280,
+        "fortify_moves": 1
+      },
+      "players": [
+        {
+          "id": "487e7b53-5532-4e7a-997e-ca60e7ac8db7",
+          "room_id": "PYX3JG",
+          "name": "Anna",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-playing-2p-neutral-fortify-0",
+          "seat": 0,
+          "is_host": 1,
+          "removed": 0
+        },
+        {
+          "id": "5f9f27c0-2372-4b48-9567-577cb2d2205e",
+          "room_id": "PYX3JG",
+          "name": "Ben",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-playing-2p-neutral-fortify-1",
+          "seat": 1,
+          "is_host": 0,
+          "removed": 0
+        }
+      ]
+    },
+    {
+      "label": "playing-3p-attack-conquered",
+      "room": {
+        "id": "3NK5R7",
+        "status": "playing",
+        "state_json": {
+          "mapId": "testland",
+          "rules": {
+            "startArmies": {
+              "2": 8,
+              "3": 7,
+              "4": 6,
+              "5": 5,
+              "6": 4
+            },
+            "minReinforcement": 3,
+            "territoryDivisor": 3,
+            "initialPlacement": "auto",
+            "fortifyReach": "connected",
+            "fortifyMoves": 1,
+            "cards": {
+              "jokers": 2,
+              "tradeValues": {
+                "infantry": 4,
+                "cavalry": 6,
+                "artillery": 8,
+                "mixed": 10
+              },
+              "territoryBonus": 2,
+              "mustTradeAt": 5
+            },
+            "victoryMode": "missions"
+          },
+          "playerOrder": [
+            "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d",
+            "cd7abf0f-9279-40cf-b7b4-e720843a61e9",
+            "385ba877-372d-4005-99c1-cd9a29921b7f"
+          ],
+          "activePlayerId": "cd7abf0f-9279-40cf-b7b4-e720843a61e9",
+          "phase": "attack",
+          "turn": 2,
+          "reinforcementsLeft": 0,
+          "territories": {
+            "grauwacht": {
+              "ownerId": "385ba877-372d-4005-99c1-cd9a29921b7f",
+              "armies": 1
+            },
+            "eisenfurt": {
+              "ownerId": "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d",
+              "armies": 1
+            },
+            "dornental": {
+              "ownerId": "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d",
+              "armies": 3
+            },
+            "tannenfeld": {
+              "ownerId": "385ba877-372d-4005-99c1-cd9a29921b7f",
+              "armies": 3
+            },
+            "nebelkueste": {
+              "ownerId": "cd7abf0f-9279-40cf-b7b4-e720843a61e9",
+              "armies": 6
+            },
+            "kupferstadt": {
+              "ownerId": "cd7abf0f-9279-40cf-b7b4-e720843a61e9",
+              "armies": 1
+            },
+            "rabenhain": {
+              "ownerId": "385ba877-372d-4005-99c1-cd9a29921b7f",
+              "armies": 3
+            },
+            "salzmoor": {
+              "ownerId": "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d",
+              "armies": 2
+            }
+          },
+          "secret": {
+            "mission": {
+              "385ba877-372d-4005-99c1-cd9a29921b7f": {
+                "type": "conquerContinents",
+                "continentIds": [],
+                "extraContinents": 1
+              },
+              "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d": {
+                "type": "holdTerritories",
+                "count": 4,
+                "minArmies": 3
+              },
+              "cd7abf0f-9279-40cf-b7b4-e720843a61e9": {
+                "type": "eliminatePlayer",
+                "targetPlayerId": "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d"
+              }
+            },
+            "originalMission": {
+              "385ba877-372d-4005-99c1-cd9a29921b7f": {
+                "type": "conquerContinents",
+                "continentIds": [],
+                "extraContinents": 1
+              },
+              "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d": {
+                "type": "holdTerritories",
+                "count": 4,
+                "minArmies": 3
+              },
+              "cd7abf0f-9279-40cf-b7b4-e720843a61e9": {
+                "type": "eliminatePlayer",
+                "targetPlayerId": "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d"
+              }
+            },
+            "missionReplaced": {
+              "385ba877-372d-4005-99c1-cd9a29921b7f": false,
+              "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d": false,
+              "cd7abf0f-9279-40cf-b7b4-e720843a61e9": false
+            },
+            "hand": {
+              "385ba877-372d-4005-99c1-cd9a29921b7f": [],
+              "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d": ["card-joker-2"],
+              "cd7abf0f-9279-40cf-b7b4-e720843a61e9": []
+            },
+            "deck": [
+              "card-joker-1",
+              "card-salzmoor",
+              "card-grauwacht",
+              "card-nebelkueste",
+              "card-tannenfeld",
+              "card-eisenfurt",
+              "card-rabenhain",
+              "card-kupferstadt",
+              "card-dornental"
+            ],
+            "discard": []
+          },
+          "pendingOccupation": null,
+          "conqueredThisTurn": true,
+          "fortifyMovesDone": 0,
+          "winnerId": null,
+          "winReason": null,
+          "removedPlayerIds": [],
+          "stateVersion": 6,
+          "lastCombat": {
+            "seq": 2,
+            "attackerId": "cd7abf0f-9279-40cf-b7b4-e720843a61e9",
+            "defenderId": "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d",
+            "from": "kupferstadt",
+            "to": "nebelkueste",
+            "rolls": [
+              {
+                "attackerDice": [5, 2, 2],
+                "defenderDice": [4],
+                "attackerLosses": 0,
+                "defenderLosses": 1
+              }
+            ],
+            "summary": {
+              "rollCount": 1,
+              "attackerLosses": 0,
+              "defenderLosses": 1,
+              "conquered": true
+            }
+          },
+          "combatSeq": 2,
+          "lastTrade": null,
+          "tradeSeq": 0
+        },
+        "map_id": "testland",
+        "version": 16,
+        "created_at": 1794237273387,
+        "updated_at": 1794237273610,
+        "victory_mode": "missions",
+        "game_no": 1,
+        "last_activity_at": 1794237273626,
+        "fortify_moves": 1
+      },
+      "players": [
+        {
+          "id": "385ba877-372d-4005-99c1-cd9a29921b7f",
+          "room_id": "3NK5R7",
+          "name": "Anna",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-playing-3p-attack-conquered-0",
+          "seat": 0,
+          "is_host": 1,
+          "removed": 0
+        },
+        {
+          "id": "bbf419f1-873a-41cf-8f1c-39ecbf1bfb8d",
+          "room_id": "3NK5R7",
+          "name": "Ben",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-playing-3p-attack-conquered-1",
+          "seat": 1,
+          "is_host": 0,
+          "removed": 0
+        },
+        {
+          "id": "cd7abf0f-9279-40cf-b7b4-e720843a61e9",
+          "room_id": "3NK5R7",
+          "name": "Cleo",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-playing-3p-attack-conquered-2",
+          "seat": 2,
+          "is_host": 0,
+          "removed": 0
+        }
+      ]
+    },
+    {
+      "label": "finished",
+      "room": {
+        "id": "QTCFNB",
+        "status": "finished",
+        "state_json": {
+          "mapId": "testland",
+          "rules": {
+            "startArmies": {
+              "2": 8,
+              "3": 7,
+              "4": 6,
+              "5": 5,
+              "6": 4
+            },
+            "minReinforcement": 3,
+            "territoryDivisor": 3,
+            "initialPlacement": "auto",
+            "fortifyReach": "connected",
+            "fortifyMoves": 1,
+            "cards": {
+              "jokers": 2,
+              "tradeValues": {
+                "infantry": 4,
+                "cavalry": 6,
+                "artillery": 8,
+                "mixed": 10
+              },
+              "territoryBonus": 2,
+              "mustTradeAt": 5
+            },
+            "victoryMode": "missions"
+          },
+          "playerOrder": [
+            "c1257f7d-133e-4954-9af4-e2d23b8a34c3",
+            "f8a80015-2d4c-449b-92ac-fef03b88365d",
+            "b4d45f9e-0187-41ad-b255-b01d31acfa2b"
+          ],
+          "activePlayerId": "c1257f7d-133e-4954-9af4-e2d23b8a34c3",
+          "phase": "reinforce",
+          "turn": 1,
+          "reinforcementsLeft": 2,
+          "territories": {
+            "rabenhain": {
+              "ownerId": "b4d45f9e-0187-41ad-b255-b01d31acfa2b",
+              "armies": 1
+            },
+            "tannenfeld": {
+              "ownerId": "c1257f7d-133e-4954-9af4-e2d23b8a34c3",
+              "armies": 3
+            },
+            "salzmoor": {
+              "ownerId": "f8a80015-2d4c-449b-92ac-fef03b88365d",
+              "armies": 5
+            },
+            "eisenfurt": {
+              "ownerId": "b4d45f9e-0187-41ad-b255-b01d31acfa2b",
+              "armies": 4
+            },
+            "dornental": {
+              "ownerId": "c1257f7d-133e-4954-9af4-e2d23b8a34c3",
+              "armies": 3
+            },
+            "grauwacht": {
+              "ownerId": "f8a80015-2d4c-449b-92ac-fef03b88365d",
+              "armies": 2
+            },
+            "nebelkueste": {
+              "ownerId": "b4d45f9e-0187-41ad-b255-b01d31acfa2b",
+              "armies": 2
+            },
+            "kupferstadt": {
+              "ownerId": "c1257f7d-133e-4954-9af4-e2d23b8a34c3",
+              "armies": 2
+            }
+          },
+          "secret": {
+            "mission": {
+              "b4d45f9e-0187-41ad-b255-b01d31acfa2b": {
+                "type": "holdTerritories",
+                "count": 8,
+                "minArmies": 99
+              },
+              "c1257f7d-133e-4954-9af4-e2d23b8a34c3": {
+                "type": "holdTerritories",
+                "count": 1,
+                "minArmies": 1
+              },
+              "f8a80015-2d4c-449b-92ac-fef03b88365d": {
+                "type": "holdTerritories",
+                "count": 8,
+                "minArmies": 99
+              }
+            },
+            "originalMission": {
+              "b4d45f9e-0187-41ad-b255-b01d31acfa2b": {
+                "type": "holdTerritories",
+                "count": 8,
+                "minArmies": 99
+              },
+              "c1257f7d-133e-4954-9af4-e2d23b8a34c3": {
+                "type": "holdTerritories",
+                "count": 1,
+                "minArmies": 1
+              },
+              "f8a80015-2d4c-449b-92ac-fef03b88365d": {
+                "type": "holdTerritories",
+                "count": 8,
+                "minArmies": 99
+              }
+            },
+            "missionReplaced": {
+              "b4d45f9e-0187-41ad-b255-b01d31acfa2b": false,
+              "c1257f7d-133e-4954-9af4-e2d23b8a34c3": false,
+              "f8a80015-2d4c-449b-92ac-fef03b88365d": false
+            },
+            "hand": {
+              "b4d45f9e-0187-41ad-b255-b01d31acfa2b": [],
+              "c1257f7d-133e-4954-9af4-e2d23b8a34c3": [],
+              "f8a80015-2d4c-449b-92ac-fef03b88365d": []
+            },
+            "deck": [
+              "card-salzmoor",
+              "card-joker-2",
+              "card-grauwacht",
+              "card-rabenhain",
+              "card-nebelkueste",
+              "card-kupferstadt",
+              "card-eisenfurt",
+              "card-joker-1",
+              "card-tannenfeld",
+              "card-dornental"
+            ],
+            "discard": []
+          },
+          "pendingOccupation": null,
+          "conqueredThisTurn": false,
+          "fortifyMovesDone": 0,
+          "winnerId": "c1257f7d-133e-4954-9af4-e2d23b8a34c3",
+          "winReason": "mission",
+          "removedPlayerIds": [],
+          "stateVersion": 6,
+          "lastCombat": null,
+          "combatSeq": 0,
+          "lastTrade": null,
+          "tradeSeq": 0
+        },
+        "map_id": "testland",
+        "version": 4,
+        "created_at": 1794237273727,
+        "updated_at": 1794237274238,
+        "victory_mode": "missions",
+        "game_no": 1,
+        "last_activity_at": 1794237274255,
+        "fortify_moves": 1
+      },
+      "players": [
+        {
+          "id": "b4d45f9e-0187-41ad-b255-b01d31acfa2b",
+          "room_id": "QTCFNB",
+          "name": "Anna",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-finished-0",
+          "seat": 0,
+          "is_host": 1,
+          "removed": 0
+        },
+        {
+          "id": "c1257f7d-133e-4954-9af4-e2d23b8a34c3",
+          "room_id": "QTCFNB",
+          "name": "Ben",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-finished-1",
+          "seat": 1,
+          "is_host": 0,
+          "removed": 0
+        },
+        {
+          "id": "f8a80015-2d4c-449b-92ac-fef03b88365d",
+          "room_id": "QTCFNB",
+          "name": "Cleo",
+          "token_hash": "PLACEHOLDER-TOKEN-HASH-finished-2",
+          "seat": 2,
+          "is_host": 0,
+          "removed": 0
+        }
+      ]
+    }
+  ]
+}

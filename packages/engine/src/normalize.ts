@@ -13,7 +13,10 @@ import type {
 } from "./types.js";
 
 /** Rules as saved before phase 3: no `fortifyReach`, no `cards` (or only part of them). */
-type LegacyRules = Omit<RuleConfig, "fortifyReach" | "fortifyMoves" | "cards" | "victoryMode"> & {
+type LegacyRules = Omit<
+  RuleConfig,
+  "fortifyReach" | "fortifyMoves" | "cards" | "victoryMode" | "missionDraft" | "holdToWin"
+> & {
   fortifyReach?: RuleConfig["fortifyReach"];
   cards?: Partial<Omit<CardRules, "tradeValues">> & {
     tradeValues?: Partial<CardRules["tradeValues"]>;
@@ -27,17 +30,48 @@ type LegacySecret = { mission: Record<PlayerId, unknown>; hand: SecretState["han
 /** The state format up to phase 3 (no `stateVersion`, `victoryMode`, `winReason`, `originalMission`, ...). */
 export type GameStateV3 = Omit<
   GameState,
-  "rules" | "secret" | "winReason" | "stateVersion" | "removedPlayerIds" | "fortifyMovesDone"
+  | "rules"
+  | "secret"
+  | "winReason"
+  | "stateVersion"
+  | "removedPlayerIds"
+  | "fortifyMovesDone"
+  | "conquestsThisTurn"
 > & {
-  rules: Omit<RuleConfig, "victoryMode" | "fortifyMoves">;
-  secret: Omit<SecretState, "mission" | "originalMission" | "missionReplaced"> & {
+  rules: Omit<RuleConfig, "victoryMode" | "fortifyMoves" | "missionDraft" | "holdToWin">;
+  secret: Omit<
+    SecretState,
+    | "mission"
+    | "originalMission"
+    | "missionReplaced"
+    | "missionOffer"
+    | "missionOfferDealt"
+    | "discardedMission"
+    | "victoryPending"
+  > & {
     mission: Record<PlayerId, unknown>;
   };
 };
 
+/**
+ * The state format of plan 011 (version 6): everything of version 7 except the plan 013 fields (`conquestsThisTurn`,
+ * `rules.missionDraft`/`holdToWin`, `secret.missionOffer`/`discardedMission`/`victoryPending`).
+ */
+export type GameStateV6 = Omit<
+  GameState,
+  "conquestsThisTurn" | "rules" | "secret" | "stateVersion"
+> & {
+  rules: Omit<RuleConfig, "missionDraft" | "holdToWin">;
+  secret: Omit<
+    SecretState,
+    "missionOffer" | "missionOfferDealt" | "discardedMission" | "victoryPending"
+  >;
+  stateVersion: 6;
+};
+
 /** The state format of phase 6a (version 5): everything of version 6 except `fortifyMovesDone` and `rules.fortifyMoves`. */
-export type GameStateV5 = Omit<GameState, "fortifyMovesDone" | "rules" | "stateVersion"> & {
-  rules: Omit<RuleConfig, "fortifyMoves">;
+export type GameStateV5 = Omit<GameStateV6, "fortifyMovesDone" | "rules" | "stateVersion"> & {
+  rules: Omit<GameStateV6["rules"], "fortifyMoves">;
   stateVersion: 5;
 };
 

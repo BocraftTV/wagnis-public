@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { isSelfTarget, joinNames, missionText, resolutionRows, winReasonText } from "./missions.js";
+import {
+  choiceWaitText,
+  isSelfTarget,
+  joinNames,
+  missionText,
+  progressText,
+  resolutionRows,
+  victoryPendingText,
+  winReasonText,
+} from "./missions.js";
 import type { Mission, MissionContext } from "./missions.js";
 
 const ctx: MissionContext = {
@@ -90,12 +99,21 @@ describe("isSelfTarget", () => {
 describe("resolutionRows", () => {
   const hold = { type: "holdTerritories", count: 6, minArmies: 2 } as const;
   const missions = {
-    a: { mission: hold, originalMission: { type: "eliminatePlayer", targetPlayerId: "a" } },
+    a: {
+      mission: hold,
+      originalMission: { type: "eliminatePlayer", targetPlayerId: "a" },
+      discarded: null,
+    },
     b: {
       mission: hold,
       originalMission: { type: "eliminatePlayer", targetPlayerId: "a" },
+      discarded: null,
     },
-    c: { mission: { type: "eliminatePlayer", targetPlayerId: "a" }, originalMission: null },
+    c: {
+      mission: { type: "eliminatePlayer", targetPlayerId: "a" },
+      originalMission: null,
+      discarded: null,
+    },
   } satisfies NonNullable<Parameters<typeof resolutionRows>[0]>;
 
   it("is null without the resolution", () => {
@@ -109,13 +127,15 @@ describe("resolutionRows", () => {
         playerId: "a",
         current: "Halte mindestens 6 Gebiete mit je 2 oder mehr Armeen",
         original: "du solltest dich selbst ausschalten",
+        discarded: null,
       },
       {
         playerId: "b",
         current: "Halte mindestens 6 Gebiete mit je 2 oder mehr Armeen",
         original: "Schalte Anna aus",
+        discarded: null,
       },
-      { playerId: "c", current: "Schalte Anna aus", original: null },
+      { playerId: "c", current: "Schalte Anna aus", original: null, discarded: null },
     ]);
   });
 
@@ -134,5 +154,56 @@ describe("winReasonText", () => {
     expect(winReasonText("lastPlayer")).toBe("als letzter verbliebener Spieler");
     expect(winReasonText("mission")).toBe("durch Erfüllen der Mission");
     expect(winReasonText(null)).toBeNull();
+  });
+});
+
+describe("plan 013 texts", () => {
+  it("words the two new mission kinds", () => {
+    expect(missionText({ type: "connectedRealm", count: 15 }, ctx)).toBe(
+      "Halte mindestens 15 Gebiete, die ohne Lücke zusammenhängen",
+    );
+    expect(missionText({ type: "blitzkrieg", count: 6 }, ctx)).toBe(
+      "Erobere in einem einzigen Zug 6 Gebiete",
+    );
+  });
+
+  it("shows progress only for the two new kinds, from the numbers of the view", () => {
+    expect(progressText({ type: "blitzkrieg", count: 6 }, { current: 4, target: 6 })).toBe(
+      "Eroberungen in diesem Zug: 4 von 6",
+    );
+    expect(progressText({ type: "connectedRealm", count: 15 }, { current: 11, target: 15 })).toBe(
+      "Größte zusammenhängende Gruppe: 11 von 15",
+    );
+    expect(progressText({ type: "holdTerritories", count: 5, minArmies: 1 }, null)).toBeNull();
+    expect(progressText(null, null)).toBeNull();
+    expect(
+      progressText({ type: "holdTerritories", count: 5, minArmies: 1 }, { current: 1, target: 5 }),
+    ).toBeNull();
+  });
+
+  it("the hold-to-win banner: own reminder first, otherwise only 'someone', never a name", () => {
+    expect(victoryPendingText(false, false)).toBeNull();
+    expect(victoryPendingText(true, false)).toBe("Jemand steht kurz vor dem Sieg.");
+    expect(victoryPendingText(true, true)).toBe("Halte deine Mission bis zu deinem nächsten Zug.");
+  });
+
+  it("the waiting text counts who has chosen", () => {
+    expect(choiceWaitText(3, 5)).toBe("Warte auf die anderen (3 von 5 haben gewählt)");
+  });
+
+  it("the resolution shows the discarded mission", () => {
+    const rows = resolutionRows(
+      {
+        a: {
+          mission: { type: "blitzkrieg", count: 6 },
+          originalMission: null,
+          discarded: { type: "connectedRealm", count: 15 },
+        },
+      },
+      ["a"],
+      "a",
+      ctx,
+    );
+    expect(rows?.[0]?.discarded).toBe("Halte mindestens 15 Gebiete, die ohne Lücke zusammenhängen");
   });
 });

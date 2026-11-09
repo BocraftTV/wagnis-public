@@ -67,6 +67,8 @@ function view(o: {
     players,
     victoryMode: "missions",
     fortifyMoves: 1,
+    missionDraft: false,
+    holdToWin: false,
     gameNo: 1,
     publicUrl: null,
     game,
@@ -85,6 +87,13 @@ describe("hostControls", () => {
     expect(c["a"]).toEqual({ skip: false, remove: false, transfer: false });
     expect(c["b"]).toEqual({ skip: true, remove: true, transfer: true });
     expect(c["c"]).toEqual({ skip: false, remove: true, transfer: true });
+  });
+
+  it("in the mission choice nobody gets the per-player skip (the choice screen has its own button)", () => {
+    const v = view({ me: "a" });
+    const c = hostControls({ ...v, game: { ...v.game!, phase: "missionChoice" } });
+    expect(c["a"]).toEqual({ skip: false, remove: false, transfer: false });
+    expect(c["b"]).toEqual({ skip: false, remove: true, transfer: true });
   });
 
   it("the host may skip his own turn, but not remove or hand over to himself", () => {
@@ -150,6 +159,8 @@ describe("messages", () => {
       settingsMessage({ fortifyMoves: 1 }),
       settingsMessage({ fortifyMoves: 2 }),
       settingsMessage({ victoryMode: "domination", fortifyMoves: 2 }),
+      settingsMessage({ missionDraft: true }),
+      settingsMessage({ holdToWin: false, missionDraft: true }),
     ]) {
       expect(clientMessageSchema.safeParse(m).success, JSON.stringify(m)).toBe(true);
     }
@@ -215,6 +226,7 @@ describe("removed players in the resolution", () => {
         a: {
           mission: { type: "holdTerritories", count: 6, minArmies: 2 },
           originalMission: { type: "eliminatePlayer", targetPlayerId: "b" },
+          discarded: null,
         },
       },
       ["a", "b"],

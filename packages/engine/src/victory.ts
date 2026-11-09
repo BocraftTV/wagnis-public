@@ -1,7 +1,7 @@
 import { getMap } from "./maps/index.js";
 import { missionSatisfied } from "./missions.js";
 import { isEliminated } from "./players.js";
-import type { GameEvent, GameState, PlayerId, WinReason } from "./types.js";
+import type { GameEvent, GameState, Mission, PlayerId, WinReason } from "./types.js";
 
 /**
  * Condition a) alone: exactly one player is left (eliminated and removed players do not count, and neither does
@@ -32,6 +32,67 @@ function declareWinner(
 }
 
 /**
+ * Whether `mission` is won by holding it until the next own turn (plan 013, rules.md 1.2): `holdToWin` is on, the mode
+ * is `"missions"` and the mission is not a one-off event (`blitzkrieg`, `eliminatePlayer` win at once).
+ */
+export function isHeldMission(state: GameState, mission: Mission | null): boolean {
+  return (
+    state.rules.holdToWin &&
+    state.rules.victoryMode === "missions" &&
+    mission !== null &&
+    mission.type !== "blitzkrieg" &&
+    mission.type !== "eliminatePlayer"
+  );
+}
+
+/**
+ * End of the active player's own turn (called by `endTurn` before the turn changes): with `holdToWin` the marker is set
+ * if the mission is met right now, and cleared otherwise. Nothing changes without a held mission.
+ */
+export function markVictoryPending(state: GameState): GameState {
+  const active = state.activePlayerId;
+  const mission = state.secret.mission[active] ?? null;
+  if (!isHeldMission(state, mission)) return state;
+  const map = getMap(state.mapId);
+  const met = map !== undefined && missionSatisfied(state, map, active);
+  if ((state.secret.victoryPending[active] ?? false) === met) return state;
+  return {
+    ...state,
+    secret: { ...state.secret, victoryPending: { ...state.secret.victoryPending, [active]: met } },
+  };
+}
+
+/**
+ * Start of a turn (after the turn change): condition a) first; then, with `holdToWin`, a set marker wins if the
+ * mission is still met and is dropped if not (no marker, no win, even if the mission happens to be met right now);
+ * then the usual `checkVictory` for the other missions.
+ */
+export function checkTurnStart(
+  state: GameState,
+  events: GameEvent[],
+): { state: GameState; events: GameEvent[] } {
+  const last = checkLastPlayer(state, events);
+  if (last.state !== state || state.winnerId !== null) return last;
+  const active = state.activePlayerId;
+  let next = state;
+  if (state.secret.victoryPending[active]) {
+    const map = getMap(state.mapId);
+    if (map && isHeldMission(state, state.secret.mission[active] ?? null)) {
+      if (missionSatisfied(state, map, active))
+        return declareWinner(state, events, active, "mission");
+    }
+    next = {
+      ...state,
+      secret: {
+        ...state.secret,
+        victoryPending: { ...state.secret.victoryPending, [active]: false },
+      },
+    };
+  }
+  return checkVictory(next, events);
+}
+
+/**
  * Win check for the ACTIVE player only (rules.md 1.2); nobody wins in another player's turn. Called after every
  * accepted action of the active player except `endPhase`, before the turn ends in `fortify`, and at the start
  * of a turn (after the turn change, and for the first player in `createGame`).
@@ -53,7 +114,14 @@ export function checkVictory(
   const mission = state.secret.mission[active];
   const map = getMap(state.mapId);
   const deferred = state.pendingOccupation !== null && mission?.type === "holdTerritories";
-  if (map && mission && !deferred && missionSatisfied(state, map, active)) {
+  // A held mission (plan 013) never wins in the middle of a turn: only `checkTurnStart` can award it.
+  if (
+    map &&
+    mission &&
+    !deferred &&
+    !isHeldMission(state, mission) &&
+    missionSatisfied(state, map, active)
+  ) {
     return declareWinner(state, events, active, "mission");
   }
   return { state, events };

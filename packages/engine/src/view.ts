@@ -1,6 +1,9 @@
 import { cardCatalog, findSuggestedSets, mustTrade } from "./cards.js";
 import { fortifyView } from "./fortify.js";
 import { getMap } from "./maps/index.js";
+import { largestRealm } from "./missions.js";
+import { isEliminated } from "./players.js";
+import { pendingChoosers } from "./mission-choice.js";
 import type {
   Card,
   CombatRecord,
@@ -8,6 +11,7 @@ import type {
   GameView,
   HandCard,
   Mission,
+  MissionProgress,
   MissionReveal,
   PlayerId,
   SecretView,
@@ -61,6 +65,10 @@ function copyMission(m: Mission): Mission {
       return { type: "holdTerritories", count: m.count, minArmies: m.minArmies };
     case "eliminatePlayer":
       return { type: "eliminatePlayer", targetPlayerId: m.targetPlayerId };
+    case "connectedRealm":
+      return { type: "connectedRealm", count: m.count };
+    case "blitzkrieg":
+      return { type: "blitzkrieg", count: m.count };
   }
 }
 
@@ -81,9 +89,30 @@ function revealMissions(state: GameState): Record<PlayerId, MissionReveal> | nul
     out[p] = {
       mission: copyMission(mission),
       originalMission: state.secret.missionReplaced[p] && original ? copyMission(original) : null,
+      discarded: state.secret.discardedMission[p]
+        ? copyMission(state.secret.discardedMission[p]!)
+        : null,
     };
   }
   return out;
+}
+
+/** Progress of the own mission for the kinds that have a number; the client works out nothing (plan 013, question 48). */
+function missionProgress(
+  state: GameState,
+  playerId: PlayerId,
+  mission: Mission,
+): MissionProgress | null {
+  const map = getMap(state.mapId);
+  if (!map) return null;
+  if (mission.type === "connectedRealm") {
+    return { current: largestRealm(state, map, playerId), target: mission.count };
+  }
+  if (mission.type === "blitzkrieg") {
+    const mine = state.activePlayerId === playerId && state.winnerId === null;
+    return { current: mine ? state.conquestsThisTurn : 0, target: mission.count };
+  }
+  return null;
 }
 
 /**
@@ -93,7 +122,16 @@ function revealMissions(state: GameState): Record<PlayerId, MissionReveal> | nul
 function secretFor(state: GameState, playerId: PlayerId): SecretView {
   // A removed player (their token is worthless anyway) gets nothing: no mission, no hand, no suggestions
   if (state.removedPlayerIds.includes(playerId)) {
-    return { mission: null, missionReplaced: false, hand: [], suggestedSets: [], mustTrade: false };
+    return {
+      mission: null,
+      missionReplaced: false,
+      missionOffer: null,
+      victoryPending: false,
+      missionProgress: null,
+      hand: [],
+      suggestedSets: [],
+      mustTrade: false,
+    };
   }
   const map = getMap(state.mapId);
   const catalog = new Map(map ? cardCatalog(map, state.rules).map((c) => [c.id, c]) : []);
@@ -101,9 +139,13 @@ function secretFor(state: GameState, playerId: PlayerId): SecretView {
   const inReinforce =
     state.winnerId === null && playerId === state.activePlayerId && state.phase === "reinforce";
   const mission = state.secret.mission[playerId];
+  const offer = state.secret.missionOffer[playerId];
   return {
     mission: mission ? copyMission(mission) : null,
     missionReplaced: state.secret.missionReplaced[playerId] ?? false,
+    missionOffer: offer ? [copyMission(offer[0]), copyMission(offer[1])] : null,
+    victoryPending: state.secret.victoryPending[playerId] ?? false,
+    missionProgress: mission ? missionProgress(state, playerId, mission) : null,
     hand: own.flatMap((id): HandCard[] => {
       const card = catalog.get(id);
       if (!card) return [];
@@ -154,6 +196,18 @@ export function viewFor(state: GameState, playerId: PlayerId): GameView {
         }
       : null,
     conqueredThisTurn: state.conqueredThisTurn,
+    conquestsThisTurn: state.conquestsThisTurn,
+    victoryPending: state.playerOrder.some(
+      (p) => state.secret.victoryPending[p] === true && !isEliminated(state, p),
+    ),
+    missionChoice:
+      state.phase === "missionChoice"
+        ? {
+            chosen: state.playerOrder.filter(
+              (p) => !state.removedPlayerIds.includes(p) && !pendingChoosers(state).includes(p),
+            ),
+          }
+        : null,
     winnerId: state.winnerId,
     winReason: state.winReason,
     victoryMode: state.rules.victoryMode,

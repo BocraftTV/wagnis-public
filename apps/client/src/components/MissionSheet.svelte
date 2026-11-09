@@ -2,11 +2,14 @@
   let {
     text,
     replaced,
+    progress = null,
     onclose,
   }: {
     /** The mission sentence for the viewer's own mission (made in `lib/missions.ts`). */
     text: string;
     replaced: boolean;
+    /** "Eroberungen in diesem Zug: 4 von 6" etc., made from `secret.missionProgress` (plan 013). */
+    progress?: string | null;
     onclose: () => void;
   } = $props();
 </script>
@@ -18,6 +21,7 @@
       <p class="replaced" role="status">Ersatzmission</p>
     {/if}
     <p class="mission">{text}</p>
+    {#if progress}<p class="progress">{progress}</p>{/if}
     <p class="note">Zeig sie niemandem. Das Blatt schließt sich erst, wenn du es schließt.</p>
     <div class="actions">
       <button onclick={onclose}>Schließen</button>
@@ -50,6 +54,10 @@
     margin: 0.6rem 0;
     font-size: 1.3rem;
     font-weight: 700;
+  }
+  .progress {
+    margin: 0 0 0.6rem;
+    font-weight: 600;
   }
   .replaced {
     display: inline-block;

@@ -32,6 +32,11 @@ export const actionSchema = z.discriminatedUnion("type", [
     bonusTerritoryId: z.string().min(1).max(64).optional(),
   }),
   z.strictObject({ type: z.literal("endPhase") }),
+  /** Plan 013: keep one of the two offered missions (phase `missionChoice`, every player). */
+  z.strictObject({
+    type: z.literal("chooseMission"),
+    index: z.union([z.literal(0), z.literal(1)]),
+  }),
 ]);
 export type ActionMessage = z.infer<typeof actionSchema>;
 
@@ -65,10 +70,18 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
       mapId: mapIdSchema.optional(),
       victoryMode: victoryModeSchema.optional(),
       fortifyMoves: fortifyMovesSchema.optional(),
+      /** Plan 013: "two missions, keep one" and "hold until the next turn" (only effective with "missions"). */
+      missionDraft: z.boolean().optional(),
+      holdToWin: z.boolean().optional(),
     })
     .refine(
-      (m) => m.mapId !== undefined || m.victoryMode !== undefined || m.fortifyMoves !== undefined,
-      { message: "settings needs mapId, victoryMode or fortifyMoves" },
+      (m) =>
+        m.mapId !== undefined ||
+        m.victoryMode !== undefined ||
+        m.fortifyMoves !== undefined ||
+        m.missionDraft !== undefined ||
+        m.holdToWin !== undefined,
+      { message: "settings needs at least one setting" },
     ),
   /** Host only (rules.md 1.6): skip a turn, remove a player. */
   z.strictObject({
@@ -137,6 +150,8 @@ export const wsErrorCodeSchema = z.enum([
   "STALE_TURN",
   "UNKNOWN_PLAYER",
   "PLAYER_REMOVED",
+  "ALREADY_CHOSEN",
+  "INVALID_CHOICE",
 ]);
 export type WsErrorCode = z.infer<typeof wsErrorCodeSchema>;
 

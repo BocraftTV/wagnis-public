@@ -65,6 +65,7 @@ describe("viewFor", () => {
       [
         "activePlayerId",
         "conqueredThisTurn",
+        "conquestsThisTurn",
         "deckCount",
         "discardCount",
         "fortify",
@@ -72,6 +73,7 @@ describe("viewFor", () => {
         "lastCombat",
         "lastTrade",
         "mapId",
+        "missionChoice",
         "pendingOccupation",
         "phase",
         "playerOrder",
@@ -81,6 +83,7 @@ describe("viewFor", () => {
         "territories",
         "turn",
         "victoryMode",
+        "victoryPending",
         "winReason",
         "winnerId",
         "missions",

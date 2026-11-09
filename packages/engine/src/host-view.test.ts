@@ -58,6 +58,9 @@ describe("viewFor with removed players", () => {
       hand: [],
       suggestedSets: [],
       mustTrade: false,
+      missionOffer: null,
+      victoryPending: false,
+      missionProgress: null,
     });
   });
 
@@ -118,6 +121,7 @@ describe("viewFor with removed players", () => {
       expect(v.missions!["a"]).toEqual({
         mission: { type: "holdTerritories", count: 6, minArmies: 2 },
         originalMission: { type: "eliminatePlayer", targetPlayerId: "b" },
+        discarded: null,
       });
       expect(v.removedPlayerIds).toEqual(["c", "b"]);
       expect(v.winnerId).toBe("a");

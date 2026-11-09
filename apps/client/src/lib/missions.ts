@@ -45,6 +45,10 @@ export function missionText(mission: Mission, ctx: MissionContext): string {
     }
     case "eliminatePlayer":
       return `Schalte ${ctx.playerName(mission.targetPlayerId)} aus`;
+    case "connectedRealm":
+      return `Halte mindestens ${mission.count} Gebiete, die ohne Lücke zusammenhängen`;
+    case "blitzkrieg":
+      return `Erobere in einem einzigen Zug ${mission.count} Gebiete`;
   }
 }
 
@@ -64,6 +68,8 @@ export interface ResolutionRow {
   current: string;
   /** Only if the mission was replaced: the one dealt at the start, worded for the self-target case. */
   original: string | null;
+  /** Only with the mission draft: the mission put away face down. */
+  discarded: string | null;
 }
 
 /**
@@ -89,7 +95,12 @@ export function resolutionRows(
           : `${ctx.playerName(playerId)} sollte sich selbst ausschalten`
         : missionText(entry.originalMission, ctx);
     }
-    rows.push({ playerId, current: missionText(entry.mission, ctx), original });
+    rows.push({
+      playerId,
+      current: missionText(entry.mission, ctx),
+      original,
+      discarded: entry.discarded ? missionText(entry.discarded, ctx) : null,
+    });
   }
   return rows;
 }
@@ -99,4 +110,36 @@ export function winReasonText(reason: GameViewMessage["winReason"]): string | nu
   if (reason === "lastPlayer") return "als letzter verbliebener Spieler";
   if (reason === "mission") return "durch Erfüllen der Mission";
   return null;
+}
+
+export type MissionProgress = NonNullable<GameViewMessage["secret"]["missionProgress"]>;
+
+/**
+ * "Eroberungen in diesem Zug: 4 von 6" / "Größte zusammenhängende Gruppe: 11 von 15". The numbers come ready from
+ * the view (`secret.missionProgress`); the client works out nothing (plan 013, question 48).
+ */
+export function progressText(
+  mission: Mission | null,
+  progress: MissionProgress | null,
+): string | null {
+  if (!mission || !progress) return null;
+  if (mission.type === "blitzkrieg") {
+    return `Eroberungen in diesem Zug: ${progress.current} von ${progress.target}`;
+  }
+  if (mission.type === "connectedRealm") {
+    return `Größte zusammenhängende Gruppe: ${progress.current} von ${progress.target}`;
+  }
+  return null;
+}
+
+/** The banner for the hold-to-win option: the public hint, and the own marker as a reminder (plan 013, question 46). */
+export function victoryPendingText(anyPending: boolean, ownPending: boolean): string | null {
+  if (ownPending) return "Halte deine Mission bis zu deinem nächsten Zug.";
+  if (anyPending) return "Jemand steht kurz vor dem Sieg.";
+  return null;
+}
+
+/** "Warte auf die anderen (3 von 5 haben gewählt)", from the public list of who has chosen. */
+export function choiceWaitText(chosen: number, total: number): string {
+  return `Warte auf die anderen (${chosen} von ${total} haben gewählt)`;
 }

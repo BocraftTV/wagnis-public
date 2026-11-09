@@ -110,6 +110,8 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
       ...baseRules,
       victoryMode: room.victoryMode,
       fortifyMoves: room.fortifyMoves,
+      missionDraft: room.missionDraft,
+      holdToWin: room.holdToWin,
     };
     const missions = map && getMissionSet(map.id);
     if (!map || !rules || !missions) return fail(conn.socket, "INTERNAL");
@@ -132,6 +134,8 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
       mapId?: MapId | undefined;
       victoryMode?: "missions" | "domination" | undefined;
       fortifyMoves?: 1 | 2 | undefined;
+      missionDraft?: boolean | undefined;
+      holdToWin?: boolean | undefined;
     },
   ): void {
     const ctx = hostContext(conn);
@@ -298,6 +302,8 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
             mapId: msg.mapId,
             victoryMode: msg.victoryMode,
             fortifyMoves: msg.fortifyMoves,
+            missionDraft: msg.missionDraft,
+            holdToWin: msg.holdToWin,
           });
         case "host":
           return handleHost(conn, msg.action, msg.reqId);

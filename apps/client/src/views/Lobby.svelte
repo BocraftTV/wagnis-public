@@ -9,7 +9,11 @@
     fortifyHint,
     fortifyLabel,
     mapLabel,
+    holdToWinHint,
+    holdToWinLabel,
     mapOptions,
+    missionDraftHint,
+    missionDraftLabel,
     modeHint,
     modeLabel,
   } from "../lib/mapname.js";
@@ -115,12 +119,51 @@
       </div>
       <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
     </section>
+    {#if view.victoryMode === "missions"}
+      <section aria-label="Missions-Optionen">
+        <h2>Missionen</h2>
+        <div class="seg" role="group" aria-label={missionDraftLabel}>
+          <button
+            class:secondary={view.missionDraft}
+            aria-pressed={!view.missionDraft}
+            onclick={() => conn.sendHost(settingsMessage({ missionDraft: false }))}>Eine Mission</button
+          >
+          <button
+            class:secondary={!view.missionDraft}
+            aria-pressed={view.missionDraft}
+            onclick={() => conn.sendHost(settingsMessage({ missionDraft: true }))}
+            >{missionDraftLabel}</button
+          >
+        </div>
+        <p class="muted">{missionDraftHint(view.missionDraft)}</p>
+        <div class="seg" role="group" aria-label={holdToWinLabel}>
+          <button
+            class:secondary={view.holdToWin}
+            aria-pressed={!view.holdToWin}
+            onclick={() => conn.sendHost(settingsMessage({ holdToWin: false }))}>Sofortiger Sieg</button
+          >
+          <button
+            class:secondary={!view.holdToWin}
+            aria-pressed={view.holdToWin}
+            onclick={() => conn.sendHost(settingsMessage({ holdToWin: true }))}
+            >{holdToWinLabel}</button
+          >
+        </div>
+        <p class="muted">{holdToWinHint(view.holdToWin)}</p>
+      </section>
+    {/if}
   {:else}
     <p class="map">Siegmodus: {modeLabel(view.victoryMode)}</p>
     <p class="muted">{modeHint(view.victoryMode)}</p>
     <p class="map">{mapLabel(view.mapId)}</p>
     <p class="map">Verschiebungen: {fortifyLabel(view.fortifyMoves)}</p>
     <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
+    {#if view.victoryMode === "missions"}
+      <p class="map">Missionen: {view.missionDraft ? missionDraftLabel : "Eine Mission"}</p>
+      <p class="muted">{missionDraftHint(view.missionDraft)}</p>
+      <p class="map">Sieg: {view.holdToWin ? holdToWinLabel : "Sofortiger Sieg"}</p>
+      <p class="muted">{holdToWinHint(view.holdToWin)}</p>
+    {/if}
   {/if}
 
   <h2>Spieler ({view.players.length}/6)</h2>

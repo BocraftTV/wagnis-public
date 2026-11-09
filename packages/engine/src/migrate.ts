@@ -1,5 +1,5 @@
 import { normalizeState } from "./normalize.js";
-import type { GameStateV3, GameStateV4, GameStateV5 } from "./normalize.js";
+import type { GameStateV3, GameStateV4, GameStateV5, GameStateV6 } from "./normalize.js";
 import { STATE_VERSION } from "./state-version.js";
 import type { GameState, MigrateErrorCode, Rng } from "./types.js";
 
@@ -43,12 +43,34 @@ export function migrate4to5(state: GameStateV4): GameStateV5 {
  * `fortifyMoves: 1`; the counter is 0 because under the old rules the first move already ended the turn (rules.md
  * 1.5, 5.3). Builds a new object; the input is not touched, no `Rng`.
  */
-export function migrate5to6(state: GameStateV5): GameState {
+export function migrate5to6(state: GameStateV5): GameStateV6 {
   return {
     ...state,
     rules: { ...state.rules, fortifyMoves: 1 },
     fortifyMovesDone: 0,
     stateVersion: 6,
+  };
+}
+
+/**
+ * 6 -> 7 (plan 013): the counter is rebuilt from the flag (exact count is not recoverable; it only matters for
+ * `blitzkrieg`, which old states do not have); no mission offers, nothing discarded, no pending victory, both
+ * mission options off (rules.md 1.5). Builds a new object; the input is not touched, no `Rng`.
+ */
+export function migrate6to7(state: GameStateV6): GameState {
+  const none = Object.fromEntries(state.playerOrder.map((p) => [p, null]));
+  return {
+    ...state,
+    rules: { ...state.rules, missionDraft: false, holdToWin: false },
+    secret: {
+      ...state.secret,
+      missionOffer: { ...none },
+      missionOfferDealt: { ...none },
+      discardedMission: { ...none },
+      victoryPending: Object.fromEntries(state.playerOrder.map((p) => [p, false])),
+    },
+    conquestsThisTurn: state.conqueredThisTurn ? 1 : 0,
+    stateVersion: 7,
   };
 }
 
@@ -60,6 +82,7 @@ const MIGRATIONS: Record<number, (state: never) => unknown> = {
   3: migrate3to4,
   4: migrate4to5,
   5: migrate5to6,
+  6: migrate6to7,
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>

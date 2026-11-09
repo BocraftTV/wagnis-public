@@ -36,7 +36,7 @@ const sizes = new Map(
 /** Fewest territories the mission can take: the named continents plus the smallest free ones. */
 function minTerritories(m: Mission): number {
   if (m.type === "holdTerritories") return m.count;
-  if (m.type === "eliminatePlayer") return 0;
+  if (m.type !== "conquerContinents") return m.type === "connectedRealm" ? m.count : 0;
   const named = m.continentIds.reduce((sum, id) => sum + sizes.get(id)!, 0);
   const free = [...sizes.entries()]
     .filter(([id]) => !m.continentIds.includes(id))
@@ -50,7 +50,7 @@ function minTerritories(m: Mission): number {
 /** Most territories the mission can take (largest free continents). */
 function maxTerritories(m: Mission): number {
   if (m.type === "holdTerritories") return m.count;
-  if (m.type === "eliminatePlayer") return 0;
+  if (m.type !== "conquerContinents") return m.type === "connectedRealm" ? m.count : 0;
   const named = m.continentIds.reduce((sum, id) => sum + sizes.get(id)!, 0);
   const free = [...sizes.entries()]
     .filter(([id]) => !m.continentIds.includes(id))
@@ -70,9 +70,13 @@ describe("world mission list", () => {
     expect(getMissionSet("constructor")).toBeUndefined();
   });
 
-  it("has 15 distinct missions, the specified fallback and no elimination mission", () => {
-    expect(worldMissions.missions).toHaveLength(15);
-    expect(new Set(worldMissions.missions.map(key)).size).toBe(15);
+  it("has 17 distinct missions, the specified fallback and no elimination mission", () => {
+    expect(worldMissions.missions).toHaveLength(17);
+    expect(new Set(worldMissions.missions.map(key)).size).toBe(17);
+    expect(worldMissions.missions.slice(15)).toEqual([
+      { type: "connectedRealm", count: 15 },
+      { type: "blitzkrieg", count: 6 },
+    ]);
     expect(worldMissions.fallback).toEqual({ type: "holdTerritories", count: 16, minArmies: 2 });
     expect(all.some((m) => m.type === "eliminatePlayer")).toBe(false);
     expect(worldMissions.missions.filter((m) => m.type === "conquerContinents")).toHaveLength(12);
@@ -98,7 +102,7 @@ describe("world mission balance", () => {
 
   it("needs the specified minimum of territories per mission", () => {
     expect(worldMissions.missions.map(minTerritories)).toEqual([
-      15, 15, 16, 16, 15, 16, 15, 17, 17, 17, 15, 15, 18, 15, 12,
+      15, 15, 16, 16, 15, 16, 15, 17, 17, 17, 15, 15, 18, 15, 12, 15, 0,
     ]);
     expect(minTerritories(worldMissions.fallback)).toBe(16);
   });
@@ -115,6 +119,8 @@ describe("world mission balance", () => {
           m.count > maxStartTerritories || m.count * m.minArmies > maxStartArmies,
           key(m),
         ).toBe(true);
+      } else if (m.type === "blitzkrieg") {
+        expect(m.count, key(m)).toBeGreaterThan(0); // the counter starts at 0
       } else {
         expect(minTerritories(m), key(m)).toBeGreaterThanOrEqual(15);
       }

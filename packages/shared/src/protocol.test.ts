@@ -41,6 +41,8 @@ const view = {
   players: [{ id: "p1", name: "Jakob", seat: 0, isHost: true, connected: true, removed: false }],
   victoryMode: "missions",
   fortifyMoves: 1,
+  missionDraft: false,
+  holdToWin: false,
   gameNo: 1,
   publicUrl: null,
   game: {
@@ -54,6 +56,9 @@ const view = {
     territories: { eisenfurt: { ownerId: "p1", armies: 2, maxAttackDice: 1, maxMove: 1 } },
     pendingOccupation: null,
     conqueredThisTurn: false,
+    conquestsThisTurn: 0,
+    victoryPending: false,
+    missionChoice: null,
     winnerId: null,
     winReason: null,
     victoryMode: "missions",
@@ -66,6 +71,9 @@ const view = {
     secret: {
       mission: null,
       missionReplaced: false,
+      missionOffer: null,
+      victoryPending: false,
+      missionProgress: null,
       hand: [],
       suggestedSets: [],
       mustTrade: false,

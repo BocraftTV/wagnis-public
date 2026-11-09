@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { mapIdSchema } from "./http.js";
 
-export const phaseSchema = z.enum(["reinforce", "attack", "fortify"]);
+export const phaseSchema = z.enum(["missionChoice", "reinforce", "attack", "fortify"]);
 
 /** `"missions"`: secret missions; `"domination"`: no missions, the last player wins (rules.md 1.1, 10.1). */
 export const victoryModeSchema = z.enum(["missions", "domination"]);
@@ -26,6 +26,8 @@ export const missionSchema = z.discriminatedUnion("type", [
     minArmies: z.number().int(),
   }),
   z.object({ type: z.literal("eliminatePlayer"), targetPlayerId: z.string() }),
+  z.object({ type: z.literal("connectedRealm"), count: z.number().int() }),
+  z.object({ type: z.literal("blitzkrieg"), count: z.number().int() }),
 ]);
 
 export const combatRecordSchema = z.object({
@@ -118,6 +120,12 @@ export const gameViewSchema = z.object({
     })
     .nullable(),
   conqueredThisTurn: z.boolean(),
+  /** Conquests in the current turn (rules.md 7). */
+  conquestsThisTurn: z.number().int().nonnegative(),
+  /** Some player holds a met mission until their next turn; no name (plan 013). */
+  victoryPending: z.boolean(),
+  /** During phase `missionChoice`: who has already chosen (not what); otherwise null. */
+  missionChoice: z.object({ chosen: z.array(z.string()) }).nullable(),
   winnerId: z.string().nullable(),
   winReason: z.enum(["lastPlayer", "mission"]).nullable(),
   victoryMode: victoryModeSchema,
@@ -125,7 +133,12 @@ export const gameViewSchema = z.object({
   missions: z
     .record(
       z.string(),
-      z.object({ mission: missionSchema, originalMission: missionSchema.nullable() }),
+      z.object({
+        mission: missionSchema,
+        originalMission: missionSchema.nullable(),
+        /** The mission put away in the draft; null without it. */
+        discarded: missionSchema.nullable(),
+      }),
     )
     .nullable(),
   lastCombat: combatRecordSchema.nullable(),
@@ -136,6 +149,12 @@ export const gameViewSchema = z.object({
   secret: z.object({
     mission: missionSchema.nullable(),
     missionReplaced: z.boolean(),
+    /** The two missions on offer while the own choice is open; otherwise null. */
+    missionOffer: z.tuple([missionSchema, missionSchema]).nullable(),
+    /** The own hold-to-win marker. */
+    victoryPending: z.boolean(),
+    /** Progress for `connectedRealm` and `blitzkrieg`, otherwise null. */
+    missionProgress: z.object({ current: z.number().int(), target: z.number().int() }).nullable(),
     hand: z.array(handCardSchema),
     suggestedSets: z.array(suggestedSetSchema),
     mustTrade: z.boolean(),
@@ -170,6 +189,9 @@ export const roomViewSchema = z.object({
   victoryMode: victoryModeSchema,
   /** Fortify moves per turn: the lobby choice, once the game runs the one in the game state (public, same for all). */
   fortifyMoves: fortifyMovesSchema,
+  /** Plan 013: the options for the missions; the lobby choice, once the game runs the value in the game state (public). */
+  missionDraft: z.boolean(),
+  holdToWin: z.boolean(),
   /** Number of the game in this room, from 1; rises with every "back to the lobby" (public). */
   gameNo: z.number().int().min(1),
   /**

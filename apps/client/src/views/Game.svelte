@@ -31,10 +31,17 @@
   import DiceRoll from "../components/DiceRoll.svelte";
   import MapCanvas from "../components/MapCanvas.svelte";
   import HostMenu from "../components/HostMenu.svelte";
+  import MissionChoice from "../components/MissionChoice.svelte";
   import MissionSheet from "../components/MissionSheet.svelte";
   import TradeDialog from "../components/TradeDialog.svelte";
   import { seenTrades, tradeLine } from "../lib/cards.js";
-  import { missionText, resolutionRows, winReasonText } from "../lib/missions.js";
+  import {
+    missionText,
+    progressText,
+    resolutionRows,
+    victoryPendingText,
+    winReasonText,
+  } from "../lib/missions.js";
   import { armiesText } from "../lib/hint.js";
   import { backToLobbyMessage, canBackToLobby, nameWithMark, playerStatus } from "../lib/host.js";
   import type { TerritoryMark } from "../lib/mark.js";
@@ -282,6 +289,12 @@
   const reasonText = $derived(winReasonText(game.winReason));
   const resolution = $derived(resolutionRows(game.missions, game.playerOrder, me, missionCtx));
 
+  // Plan 013: progress of the own mission and the hold-to-win hint; both come ready from the view.
+  const progress = $derived(progressText(game.secret.mission, game.secret.missionProgress));
+  const pendingBanner = $derived(
+    finished ? null : victoryPendingText(game.victoryPending, game.secret.victoryPending),
+  );
+
   // The own mission is shown on request only (others look over the table); `secret.mission` is `null` in "domination".
   let missionOpen = $state(false);
   const myMission = $derived(game.secret.mission);
@@ -290,6 +303,10 @@
   });
 </script>
 
+{#if game.phase === "missionChoice"}
+  <MissionChoice {view} {game} {conn} ctx={missionCtx} />
+  {#if conn.notice}<div class="toast" role="alert">{conn.notice}</div>{/if}
+{:else}
 <div class="game">
   <header class="status">
     <div class="who" class:mine={myTurn}>
@@ -312,6 +329,13 @@
       </button>
     {/if}
   </header>
+
+  {#if pendingBanner}
+    <div class="pending-banner" role="status">{pendingBanner}</div>
+  {/if}
+  {#if progress && !finished}
+    <div class="progress" role="status">{progress}</div>
+  {/if}
 
   {#if myTurn && game.phase === "reinforce" && mustTrade && !finished}
     <section class="bar" aria-label="Pflichttausch">
@@ -358,6 +382,9 @@
             <span class="mission-line">{row.current}</span>
             {#if row.original}
               <span class="replaced-line">ersetzt: ursprünglich gezogen: {row.original}</span>
+            {/if}
+            {#if row.discarded}
+              <span class="replaced-line">abgeworfen: {row.discarded}</span>
             {/if}
           </li>
         {/each}
@@ -519,6 +546,7 @@
     <MissionSheet
       text={missionText(myMission, missionCtx)}
       replaced={game.secret.missionReplaced}
+      {progress}
       onclose={() => (missionOpen = false)}
     />
   {/if}
@@ -599,6 +627,7 @@
 
   {#if conn.notice}<div class="toast" role="alert">{conn.notice}</div>{/if}
 </div>
+{/if}
 
 <style>
   .game {
@@ -620,6 +649,17 @@
   }
   .status .mission-btn {
     margin-left: 0;
+  }
+  .pending-banner {
+    padding: 0.5rem 1rem;
+    background: var(--panel-2);
+    border-left: 4px solid var(--accent);
+    font-weight: 600;
+  }
+  .progress {
+    padding: 0.4rem 1rem;
+    color: var(--muted);
+    font-size: 0.9rem;
   }
   .who.mine strong {
     color: var(--accent);

@@ -40,7 +40,12 @@ export function hostControls(view: RoomView): Record<string, PlayerControls> {
     const removed = p.removed;
     const running = view.status === "playing" && view.game !== null && view.game.winnerId === null;
     out[p.id] = {
-      skip: running && !removed && view.game!.activePlayerId === p.id,
+      // Not in the mission choice: nobody is at turn yet, the host has his own button there (plan 013)
+      skip:
+        running &&
+        !removed &&
+        view.game!.phase !== "missionChoice" &&
+        view.game!.activePlayerId === p.id,
       remove: !mine && !removed && (view.status === "lobby" || view.status === "playing"),
       transfer: !mine && !removed && p.connected,
     };
@@ -70,6 +75,8 @@ export const settingsMessage = (patch: {
   mapId?: "welt" | "testland";
   victoryMode?: "missions" | "domination";
   fortifyMoves?: 1 | 2;
+  missionDraft?: boolean;
+  holdToWin?: boolean;
 }): ClientMessage => ({ type: "settings", ...patch });
 
 /** "Annas", "Max'" (names ending in s, ß, x or z take only the apostrophe). */

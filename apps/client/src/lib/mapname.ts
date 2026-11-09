@@ -38,3 +38,17 @@ export function fortifyHint(moves: FortifyMoves): string {
     ? "Bis zu zwei Verschiebungen pro Zug; „Zug beenden“ geht vorher."
     : "Eine Verschiebung pro Zug, danach endet der Zug.";
 }
+
+/** Lobby options for the missions (plan 013): label and one sentence each. */
+export const missionDraftLabel = "Zwei ziehen, eine behalten";
+export function missionDraftHint(on: boolean): string {
+  return on
+    ? "Jeder bekommt zwei Missionen und wählt vor dem ersten Zug geheim eine; die andere wird verdeckt abgelegt und am Ende aufgedeckt."
+    : "Jeder bekommt eine Mission zugeteilt.";
+}
+export const holdToWinLabel = "Halten bis zum nächsten Zug";
+export function holdToWinHint(on: boolean): string {
+  return on
+    ? "Wer seine Mission erfüllt, gewinnt erst, wenn sie zu Beginn seines nächsten Zugs noch erfüllt ist. Alle sehen nur „Jemand steht kurz vor dem Sieg“. Blitzkrieg und Ausschalten zählen sofort."
+    : "Wer seine Mission erfüllt, gewinnt sofort.";
+}

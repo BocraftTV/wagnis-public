@@ -13,6 +13,9 @@ export const testlandMissions: MissionSet = {
     { type: "conquerContinents", continentIds: ["nordreich"], extraContinents: 1 },
     { type: "holdTerritories", count: 5, minArmies: 2 },
     { type: "holdTerritories", count: 4, minArmies: 3 },
+    // Plan 013: count 5 > the 3 territories an owner starts with.
+    { type: "connectedRealm", count: 5 },
+    { type: "blitzkrieg", count: 3 },
   ],
   fallback: { type: "holdTerritories", count: 6, minArmies: 2 },
 };

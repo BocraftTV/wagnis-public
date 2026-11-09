@@ -17,6 +17,9 @@ export interface RoomRow {
   victoryMode: VictoryMode;
   /** Fortify moves per turn chosen in the lobby (1 or 2); a running game uses the one in its state. */
   fortifyMoves: 1 | 2;
+  /** Mission options chosen in the lobby (plan 013); a running game uses the values in its state. */
+  missionDraft: boolean;
+  holdToWin: boolean;
   /** Number of the game in this room, from 1; rises with every "back to the lobby". */
   gameNo: number;
   stateJson: string | null;
@@ -54,7 +57,9 @@ CREATE TABLE IF NOT EXISTS rooms (
   victory_mode TEXT NOT NULL DEFAULT 'missions',
   game_no INTEGER NOT NULL DEFAULT 1,
   last_activity_at INTEGER NOT NULL DEFAULT 0,
-  fortify_moves INTEGER NOT NULL DEFAULT 1
+  fortify_moves INTEGER NOT NULL DEFAULT 1,
+  mission_draft INTEGER NOT NULL DEFAULT 0,
+  hold_to_win INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
@@ -70,7 +75,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS players_room_name ON players (room_id, lower(n
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
 `;
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 export class Store {
   private readonly db: Database.Database;
@@ -91,7 +96,8 @@ export class Store {
    * started with), `rooms.game_no` (1), `rooms.last_activity_at` (filled once from `updated_at`) and
    * `players.removed` (0). All in one transaction; rows are not rewritten otherwise, and opening an up-to-date
    * database changes nothing. Version 4 (plan 011) adds `rooms.fortify_moves` (old rows: 1, the one fortify move per
-   * turn every room had until then).
+   * turn every room had until then). Version 5 (plan 013) adds `rooms.mission_draft` and `rooms.hold_to_win` (old rows: 0,
+   * both options off).
    */
   private upgrade(): void {
     const has = (table: string, column: string): boolean =>
@@ -113,6 +119,12 @@ export class Store {
     }
     if (!has("rooms", "fortify_moves")) {
       this.db.exec("ALTER TABLE rooms ADD COLUMN fortify_moves INTEGER NOT NULL DEFAULT 1");
+    }
+    if (!has("rooms", "mission_draft")) {
+      this.db.exec("ALTER TABLE rooms ADD COLUMN mission_draft INTEGER NOT NULL DEFAULT 0");
+    }
+    if (!has("rooms", "hold_to_win")) {
+      this.db.exec("ALTER TABLE rooms ADD COLUMN hold_to_win INTEGER NOT NULL DEFAULT 0");
     }
     if (!has("players", "removed")) {
       this.db.exec("ALTER TABLE players ADD COLUMN removed INTEGER NOT NULL DEFAULT 0");
@@ -144,6 +156,8 @@ export class Store {
       mapId: r["map_id"] as MapId,
       victoryMode: r["victory_mode"] as VictoryMode,
       fortifyMoves: r["fortify_moves"] as 1 | 2,
+      missionDraft: r["mission_draft"] === 1,
+      holdToWin: r["hold_to_win"] === 1,
       gameNo: r["game_no"] as number,
       stateJson: r["state_json"] as string | null,
       version: r["version"] as number,
@@ -305,6 +319,8 @@ export class Store {
       mapId?: MapId | undefined;
       victoryMode?: VictoryMode | undefined;
       fortifyMoves?: 1 | 2 | undefined;
+      missionDraft?: boolean | undefined;
+      holdToWin?: boolean | undefined;
     },
     now: number,
   ): boolean {
@@ -320,6 +336,14 @@ export class Store {
         this.db
           .prepare("UPDATE rooms SET fortify_moves = ? WHERE id = ?")
           .run(patch.fortifyMoves, roomId);
+      if (patch.missionDraft !== undefined)
+        this.db
+          .prepare("UPDATE rooms SET mission_draft = ? WHERE id = ?")
+          .run(patch.missionDraft ? 1 : 0, roomId);
+      if (patch.holdToWin !== undefined)
+        this.db
+          .prepare("UPDATE rooms SET hold_to_win = ? WHERE id = ?")
+          .run(patch.holdToWin ? 1 : 0, roomId);
       this.db
         .prepare(
           "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",

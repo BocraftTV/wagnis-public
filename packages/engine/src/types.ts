@@ -41,7 +41,11 @@ export type WinReason = "lastPlayer" | "mission";
 export type Mission =
   | { type: "conquerContinents"; continentIds: ContinentId[]; extraContinents: number }
   | { type: "holdTerritories"; count: number; minArmies: number }
-  | { type: "eliminatePlayer"; targetPlayerId: PlayerId };
+  | { type: "eliminatePlayer"; targetPlayerId: PlayerId }
+  /** At least `count` own territories that form one connected group over the map's neighbours (land or sea). */
+  | { type: "connectedRealm"; count: number }
+  /** At least `count` conquests in one attack phase of the holder's own turn. */
+  | { type: "blitzkrieg"; count: number };
 
 /** Missions of one map (own file next to the `MapDefinition`). */
 export interface MissionSet {
@@ -64,9 +68,13 @@ export interface RuleConfig {
   cards: CardRules;
   /** `"missions"` (default): secret missions; `"domination"`: no missions, the last player wins. */
   victoryMode: VictoryMode;
+  /** Plan 013: every player gets two missions and keeps one, chosen in phase `missionChoice` (rules.md 1.1). Only in `"missions"`. */
+  missionDraft: boolean;
+  /** Plan 013: a met mission only wins at the start of the holder's next turn (rules.md 1.2). Only in `"missions"`. */
+  holdToWin: boolean;
 }
 
-export type Phase = "reinforce" | "attack" | "fortify";
+export type Phase = "missionChoice" | "reinforce" | "attack" | "fortify";
 
 export interface TerritoryState {
   ownerId: Owner;
@@ -80,6 +88,14 @@ export interface SecretState {
   originalMission: Record<PlayerId, Mission | null>;
   /** True once the mission was replaced by the fallback. Own view only. */
   missionReplaced: Record<PlayerId, boolean>;
+  /** The two missions on offer while `phase` is "missionChoice"; null once chosen (and outside the draft). Own view only. */
+  missionOffer: Record<PlayerId, [Mission, Mission] | null>;
+  /** The two missions as drawn (self targets not yet replaced); the other half of the offer. Internal, never in a view. */
+  missionOfferDealt: Record<PlayerId, [Mission, Mission] | null>;
+  /** The mission put away face down; revealed after the game only. Null without the draft. */
+  discardedMission: Record<PlayerId, Mission | null>;
+  /** Hold-to-win marker: the mission was met at the end of the holder's own turn. Internal; own view only. */
+  victoryPending: Record<PlayerId, boolean>;
   hand: Record<PlayerId, CardId[]>;
   /** Draw pile; `deck[0]` is the top card. Never leaves the server. */
   deck: CardId[];
@@ -103,6 +119,8 @@ export interface GameState {
   pendingOccupation: PendingOccupation | null;
   /** At least one territory was conquered this turn; reset at turn start. */
   conqueredThisTurn: boolean;
+  /** Conquests in the current turn; reset at every turn change. Public (rules.md 7). `conqueredThisTurn === (conquestsThisTurn > 0)`. */
+  conquestsThisTurn: number;
   /** Accepted fortify moves in the current turn; reset at every turn change (rules.md 5.3). Internal, never in a view. */
   fortifyMovesDone: number;
   /** Set as soon as someone wins (rules.md 1.2). */
@@ -197,7 +215,9 @@ export type Action =
   | { type: "occupy"; count: number }
   | { type: "fortify"; from: TerritoryId; to: TerritoryId; count: number }
   | { type: "tradeCards"; cardIds: CardId[]; bonusTerritoryId?: TerritoryId | undefined }
-  | { type: "endPhase" };
+  | { type: "endPhase" }
+  /** Plan 013: keep one of the two offered missions; valid for every player in phase `missionChoice`. */
+  | { type: "chooseMission"; index: 0 | 1 };
 
 /**
  * Actions only the host may trigger (rules.md 1.6). The engine does not know who the host is: the server checks that
@@ -234,7 +254,9 @@ export type ActionErrorCode =
   | "INVALID_BONUS_TERRITORY"
   | "STALE_TURN"
   | "UNKNOWN_PLAYER"
-  | "PLAYER_REMOVED";
+  | "PLAYER_REMOVED"
+  | "ALREADY_CHOSEN"
+  | "INVALID_CHOICE";
 
 export type SetupErrorCode =
   | "INVALID_MAP"
@@ -249,6 +271,8 @@ export type MigrateErrorCode = "STATE_VERSION_INVALID" | "STATE_VERSION_UNSUPPOR
 export type GameEvent =
   | { type: "gameStarted"; firstPlayerId: PlayerId }
   | { type: "turnStarted"; playerId: PlayerId; turn: number; reinforcements: number }
+  /** Public, without the mission (plan 013). */
+  | { type: "missionChosen"; playerId: PlayerId }
   | { type: "armiesPlaced"; playerId: PlayerId; territoryId: TerritoryId; count: number }
   | { type: "phaseChanged"; playerId: PlayerId; phase: Phase }
   | {
@@ -342,6 +366,14 @@ export interface MissionReveal {
   mission: Mission;
   /** The mission as dealt, only if it was replaced by the fallback; otherwise null. */
   originalMission: Mission | null;
+  /** The mission put away in the draft ("two missions, keep one"); null without the draft. Plan 013. */
+  discarded: Mission | null;
+}
+
+/** Progress towards the own mission, only for `connectedRealm` and `blitzkrieg` (plan 013, question 48). */
+export interface MissionProgress {
+  current: number;
+  target: number;
 }
 
 /** The viewer's own secrets only. */
@@ -350,6 +382,12 @@ export interface SecretView {
   mission: Mission | null;
   /** True if the current mission is the fallback. No public counterpart exists. */
   missionReplaced: boolean;
+  /** The two missions on offer while the own choice is open (phase `missionChoice`); otherwise null. */
+  missionOffer: [Mission, Mission] | null;
+  /** The own hold-to-win marker (the mission was met at the end of the own last turn). */
+  victoryPending: boolean;
+  /** Progress of the own mission; null for the other kinds. Worked out by the engine, never by the client. */
+  missionProgress: MissionProgress | null;
   hand: HandCard[];
   /** At most one set per trade value (best first); only in the own reinforce phase, otherwise empty. */
   suggestedSets: SuggestedSet[];
@@ -369,6 +407,12 @@ export interface GameView {
   territories: Record<TerritoryId, TerritoryView>;
   pendingOccupation: PendingOccupationView | null;
   conqueredThisTurn: boolean;
+  /** Public counter of conquests in the current turn (rules.md 7). */
+  conquestsThisTurn: number;
+  /** Some player still in the game holds the hold-to-win marker; no name (plan 013, question 46). */
+  victoryPending: boolean;
+  /** Who has already chosen a mission, only during phase `missionChoice` (plan 013); otherwise null. */
+  missionChoice: { chosen: PlayerId[] } | null;
   winnerId: PlayerId | null;
   /** Set together with `winnerId`, otherwise null. */
   winReason: WinReason | null;

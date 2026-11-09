@@ -61,6 +61,9 @@ function check(
         hand: [],
         suggestedSets: [],
         mustTrade: false,
+        missionOffer: null,
+        victoryPending: false,
+        missionProgress: null,
       });
       expect(v.handCounts[p]).toBe(0);
     }

@@ -2,7 +2,7 @@ import { drawCard } from "./cards.js";
 import { getMap } from "./maps/index.js";
 import { isEliminated } from "./players.js";
 import { calculateReinforcements } from "./reinforcement.js";
-import { checkVictory } from "./victory.js";
+import { checkTurnStart, markVictoryPending } from "./victory.js";
 import type { ActionResult, GameEvent, GameState, PlayerId, Rng } from "./types.js";
 
 /** Next player in seat order who has not been eliminated. */
@@ -25,6 +25,8 @@ function nextPlayer(state: GameState): PlayerId {
 export function endTurn(state: GameState, events: GameEvent[], rng: Rng): ActionResult {
   const map = getMap(state.mapId);
   if (!map) return { ok: false, code: "UNKNOWN_MAP" };
+  // End of the turn: with `holdToWin` a met mission sets the marker (plan 013).
+  state = markVictoryPending(state);
   const drawn = state.conqueredThisTurn
     ? drawCard(state, state.activePlayerId, rng)
     : { state, events: [] };
@@ -40,6 +42,7 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
     turn,
     reinforcementsLeft: reinforcements,
     conqueredThisTurn: false,
+    conquestsThisTurn: 0,
     fortifyMovesDone: 0,
     lastCombat: null, // combatSeq stays, so seq never jumps back
     lastTrade: null, // same for tradeSeq
@@ -47,7 +50,7 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
   // Start of the new player's turn: after the draw and the turn change, before any action of theirs.
   return {
     ok: true,
-    ...checkVictory(next, [
+    ...checkTurnStart(next, [
       ...allEvents,
       { type: "phaseChanged", playerId: nextId, phase: "reinforce" },
       { type: "turnStarted", playerId: nextId, turn, reinforcements },

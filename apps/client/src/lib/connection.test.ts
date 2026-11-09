@@ -73,6 +73,8 @@ const snapshot = (version: number) => ({
     players: [{ id: "p1", name: "A", seat: 0, isHost: true, connected: true, removed: false }],
     victoryMode: "missions",
     fortifyMoves: 1,
+    missionDraft: false,
+    holdToWin: false,
     gameNo: 1,
     publicUrl: null,
     game: null,

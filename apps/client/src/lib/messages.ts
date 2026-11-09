@@ -53,6 +53,8 @@ export const wsErrorText: Record<WsErrorCode, string> = {
   STALE_TURN: "Der Zug hat inzwischen gewechselt.",
   UNKNOWN_PLAYER: "Dieser Spieler ist nicht mehr dabei.",
   PLAYER_REMOVED: "Dieser Spieler ist nicht mehr dabei.",
+  ALREADY_CHOSEN: "Du hast schon gewählt.",
+  INVALID_CHOICE: "Diese Auswahl gibt es nicht.",
   NOT_FINISHED: "Die Partie läuft noch.",
   CANNOT_REMOVE_SELF: "Gib erst die Host-Rolle ab, dann kann dich der neue Host entfernen.",
   ALREADY_HOST: "Das ist schon der Host.",
@@ -60,6 +62,7 @@ export const wsErrorText: Record<WsErrorCode, string> = {
 };
 
 export const phaseText = {
+  missionChoice: "Mission wählen",
   reinforce: "Verstärken",
   attack: "Angriff",
   fortify: "Verschieben",

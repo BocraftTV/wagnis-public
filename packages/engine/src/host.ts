@@ -1,4 +1,5 @@
 import { applyOccupy } from "./attack.js";
+import { chooseForPending, startFirstTurn, startIfAllChose } from "./mission-choice.js";
 import { replaceTargetMissions } from "./missions.js";
 import { endTurn } from "./turn.js";
 import { checkLastPlayer, checkVictory } from "./victory.js";
@@ -44,6 +45,11 @@ export function applyHostAction(state: GameState, action: HostAction, rng: Rng):
 function skipTurn(state: GameState, action: SkipTurnAction, rng: Rng): ActionResult {
   if (state.winnerId !== null) return fail("GAME_OVER");
   if (action.turn !== state.turn) return fail("STALE_TURN");
+  if (state.phase === "missionChoice") {
+    // Nobody is at turn yet: choose at random for everybody who has not chosen (plan 013, question 44), then start.
+    const chosen = chooseForPending(state, rng);
+    return startFirstTurn(chosen.state, chosen.events);
+  }
   const playerId = state.activePlayerId;
   let events: GameEvent[] = [{ type: "turnSkipped", playerId, turn: state.turn }];
   let next = state;
@@ -99,6 +105,10 @@ function removePlayer(state: GameState, action: RemovePlayerAction, rng: Rng): A
       ...state.secret,
       hand: { ...state.secret.hand, [id]: [] },
       discard: [...state.secret.discard, ...hand],
+      missionOffer: { ...state.secret.missionOffer, [id]: null },
+      missionOfferDealt: { ...state.secret.missionOfferDealt, [id]: null },
+      discardedMission: { ...state.secret.discardedMission, [id]: null },
+      victoryPending: { ...state.secret.victoryPending, [id]: false },
       mission: { ...state.secret.mission, [id]: null },
       originalMission: { ...state.secret.originalMission, [id]: null },
       missionReplaced: { ...state.secret.missionReplaced, [id]: false },
@@ -109,9 +119,21 @@ function removePlayer(state: GameState, action: RemovePlayerAction, rng: Rng): A
     { type: "playerRemoved", playerId: id, territoryCount, discardedCount: hand.length },
   ];
 
+  if (state.phase === "missionChoice") {
+    // Offers of the removed player lapse; if everyone left has chosen, the game begins (plan 013).
+    const last = checkLastPlayer(next, events);
+    if (last.state.winnerId !== null) return { ok: true, ...last };
+    return startIfAllChose(last.state, last.events);
+  }
   if (state.activePlayerId !== id) return { ok: true, ...checkLastPlayer(next, events) };
 
-  next = { ...next, pendingOccupation: null, conqueredThisTurn: false, reinforcementsLeft: 0 };
+  next = {
+    ...next,
+    pendingOccupation: null,
+    conqueredThisTurn: false,
+    conquestsThisTurn: 0,
+    reinforcementsLeft: 0,
+  };
   const last = checkLastPlayer(next, events);
   if (last.state.winnerId !== null) return { ok: true, ...last };
   return endTurn(last.state, last.events, rng);

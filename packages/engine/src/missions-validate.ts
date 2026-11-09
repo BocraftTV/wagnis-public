@@ -22,6 +22,9 @@ function checkMission(map: MapDefinition, m: Mission, label: string, errors: str
     else if (m.continentIds.length + m.extraContinents > map.continents.length) {
       errors.push(`${label}: more continents than the map has`);
     }
+  } else if (m.type === "connectedRealm" || m.type === "blitzkrieg") {
+    if (!isCount(m.count, 1) || m.count > map.territories.length)
+      errors.push(`${label}: bad count`);
   } else {
     errors.push(`${label}: eliminatePlayer is not allowed in the map list`);
   }

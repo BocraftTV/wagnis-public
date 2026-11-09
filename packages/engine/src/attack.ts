@@ -131,6 +131,7 @@ function fight(
     next = {
       ...next,
       conqueredThisTurn: true,
+      conquestsThisTurn: state.conquestsThisTurn + 1,
       territories: {
         ...territories,
         [fromId]: { ...territories[fromId]!, armies: fromArmies - min },
