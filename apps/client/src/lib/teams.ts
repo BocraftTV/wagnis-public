@@ -81,18 +81,39 @@ export function teamOfPlayer(teams: GameViewMessage["teams"], id: string): TeamI
   return null;
 }
 
-/** "Team A hat gewonnen: Anna und Ben" for a team game. */
+/**
+ * The winning teams, in team order: every team with a member in `winnerIds` (two or more only on a tie after the
+ * round limit, rules.md 13); `winnerTeamId` alone if none matches. Display only, the server decides who won.
+ */
+export function winningTeams(
+  teams: GameViewMessage["teams"],
+  winnerIds: string[],
+  winnerTeamId: TeamId | null,
+): TeamId[] {
+  const out: TeamId[] = [];
+  if (teams) {
+    for (const [letter, members] of Object.entries(teams as Teams)) {
+      if (members?.some((p) => winnerIds.includes(p))) out.push(letter as TeamId);
+    }
+  }
+  if (out.length === 0 && winnerTeamId) out.push(winnerTeamId);
+  return out.sort();
+}
+
+const joinNames = (names: string[]): string =>
+  names.length <= 1
+    ? names.join("")
+    : `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
+
+/** "Team A hat gewonnen: Anna und Ben" for a team game; on a tie "Team A und Team B haben gewonnen: ...". */
 export function teamWinText(
-  teamId: TeamId,
+  teamIds: TeamId[],
   winnerIds: string[],
   nameOf: (id: string) => string,
 ): string {
-  const names = winnerIds.map(nameOf);
-  const list =
-    names.length <= 1
-      ? names.join("")
-      : `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
-  return `${teamName(teamId)} hat gewonnen: ${list}`;
+  const list = joinNames(winnerIds.map(nameOf));
+  const verb = teamIds.length > 1 ? "haben" : "hat";
+  return `${joinNames(teamIds.map(teamName))} ${verb} gewonnen: ${list}`;
 }
 
 export interface TeamScoreRow {
@@ -103,10 +124,10 @@ export interface TeamScoreRow {
   winner: boolean;
 }
 
-/** Team table rows in the server's order; the winners are marked from `winnerTeamId`. */
+/** Team table rows in the server's order; the winners are marked from `winningTeams`. */
 export function teamScoreRows(
   scores: GameViewMessage["teamScores"],
-  winnerTeamId: TeamId | null,
+  winnerTeams: TeamId[],
 ): TeamScoreRow[] {
   if (!scores) return [];
   return scores.map((s) => ({
@@ -114,6 +135,6 @@ export function teamScoreRows(
     members: s.playerIds,
     points: s.points,
     armies: s.armies,
-    winner: s.teamId === winnerTeamId,
+    winner: winnerTeams.includes(s.teamId),
   }));
 }

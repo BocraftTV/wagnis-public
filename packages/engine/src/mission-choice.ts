@@ -138,7 +138,7 @@ export function applyChooseMission(
 
 /**
  * Host `skipTurn` in `missionChoice` (rules.md 1.6, question 44): everybody who has not chosen gets one of their two
- * missions at random over the `Rng`, in seat order. Then the first turn starts.
+ * missions at random over the `Rng`, in seat order; in a team game once per team. Then the first turn starts.
  */
 export function chooseForPending(
   state: GameState,
@@ -147,6 +147,8 @@ export function chooseForPending(
   let next = state;
   const events: GameEvent[] = [];
   for (const p of pendingChoosers(state)) {
+    // In a team game the choice for the first open member settled the mates too (rules.md 13, question 56).
+    if (next.secret.missionOffer[p] == null) continue;
     next = choose(next, p, rng.int(2) === 0 ? 0 : 1);
     events.push({ type: "missionChosen", playerId: p });
   }

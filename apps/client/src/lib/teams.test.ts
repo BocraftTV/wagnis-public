@@ -11,6 +11,7 @@ import {
   teamOfPlayer,
   teamScoreRows,
   teamWinText,
+  winningTeams,
 } from "./teams.js";
 import { targetsFrom } from "./attack.js";
 import { randomTeamsMessage, settingsMessage, teamMessage } from "./host.js";
@@ -69,7 +70,16 @@ describe("in the game", () => {
     expect(teamOfPlayer(null, "c")).toBeNull();
   });
   it("win text for a team", () => {
-    expect(teamWinText("A", ["a", "b"], names)).toBe("Team A hat gewonnen: Anna und Ben");
+    expect(teamWinText(["A"], ["a", "b"], names)).toBe("Team A hat gewonnen: Anna und Ben");
+    expect(teamWinText(["A", "B"], ["a", "b", "c", "d"], names)).toBe(
+      "Team A und Team B haben gewonnen: Anna, Ben, Cleo und Dora",
+    );
+  });
+  it("the winning teams come from winnerIds: one team, or every team level after the round limit", () => {
+    expect(winningTeams(teams, ["a", "b"], "A")).toEqual(["A"]);
+    expect(winningTeams(teams, ["a", "b", "c", "d"], "A")).toEqual(["A", "B"]);
+    expect(winningTeams(teams, [], "B")).toEqual(["B"]);
+    expect(winningTeams(null, [], null)).toEqual([]);
   });
   it("team score rows keep the order and mark the winner", () => {
     expect(
@@ -78,13 +88,22 @@ describe("in the game", () => {
           { teamId: "A", playerIds: ["a", "b"], points: 7, armies: 12 },
           { teamId: "B", playerIds: ["c", "d"], points: 5, armies: 9 },
         ],
-        "A",
+        ["A"],
       ),
     ).toEqual([
       { teamId: "A", members: ["a", "b"], points: 7, armies: 12, winner: true },
       { teamId: "B", members: ["c", "d"], points: 5, armies: 9, winner: false },
     ]);
-    expect(teamScoreRows(null, null)).toEqual([]);
+    expect(teamScoreRows(null, [])).toEqual([]);
+    expect(
+      teamScoreRows(
+        [
+          { teamId: "A", playerIds: ["a", "b"], points: 5, armies: 9 },
+          { teamId: "B", playerIds: ["c", "d"], points: 5, armies: 9 },
+        ],
+        ["A", "B"],
+      ).map((r) => r.winner),
+    ).toEqual([true, true]);
   });
   it("attack targets leave out the partner's territories", () => {
     const neighbors = { x: ["y", "z", "w"] };

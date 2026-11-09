@@ -44,7 +44,14 @@
   } from "../lib/missions.js";
   import { roundText, scoreRows, winnersText } from "../lib/rounds.js";
   import { eventText, eventTitle } from "../lib/events.js";
-  import { mateIds, teamName, teamOfPlayer, teamScoreRows, teamWinText } from "../lib/teams.js";
+  import {
+    mateIds,
+    teamName,
+    teamOfPlayer,
+    teamScoreRows,
+    teamWinText,
+    winningTeams,
+  } from "../lib/teams.js";
   import { armiesText } from "../lib/hint.js";
   import { backToLobbyMessage, canBackToLobby, nameWithMark, playerStatus } from "../lib/host.js";
   import type { TerritoryMark } from "../lib/mark.js";
@@ -79,7 +86,9 @@
 
   // Team mates (display only): their territories are no attack targets, and their hands are shown.
   const mates = $derived(mateIds(game.teams, me));
-  const teamRows = $derived(teamScoreRows(game.teamScores, game.winnerTeamId));
+  // On a tie after the round limit two teams win together (rules.md 13): every team with a winner is marked.
+  const winnerTeams = $derived(winningTeams(game.teams, game.winnerIds, game.winnerTeamId));
+  const teamRows = $derived(teamScoreRows(game.teamScores, winnerTeams));
   const neighbors = $derived(
     data ? Object.fromEntries(data.map.territories.map((t) => [t.id, t.neighbors])) : {},
   );
@@ -366,7 +375,7 @@
   {#if finished && game.winnerId}
     <div class="winner" role="status">
       🏆 {game.winnerTeamId
-        ? teamWinText(game.winnerTeamId, game.winnerIds, playerName)
+        ? teamWinText(winnerTeams, game.winnerIds, playerName)
         : winnersText(game.winnerIds, game.winnerId, playerName, me)}{reasonText
         ? ` – ${reasonText}`
         : ""}

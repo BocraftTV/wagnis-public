@@ -356,7 +356,8 @@ export class Store {
     now: number,
   ): boolean {
     return this.db.transaction((): boolean => {
-      if (this.getRoom(roomId)?.status !== "lobby") return false;
+      const room = this.getRoom(roomId);
+      if (room?.status !== "lobby") return false;
       if (patch.mapId !== undefined)
         this.db.prepare("UPDATE rooms SET map_id = ? WHERE id = ?").run(patch.mapId, roomId);
       if (patch.victoryMode !== undefined)
@@ -379,8 +380,8 @@ export class Store {
         this.db
           .prepare("UPDATE rooms SET round_limit = ? WHERE id = ?")
           .run(patch.roundLimit, roomId);
-      if (patch.teams !== undefined) {
-        // A new layout starts without an assignment (the old one would not fit).
+      if (patch.teams !== undefined && patch.teams !== room.teams) {
+        // A new layout starts without an assignment (the old one would not fit); the same layout keeps it.
         this.db.prepare("UPDATE rooms SET teams = ? WHERE id = ?").run(patch.teams, roomId);
         this.db.prepare("UPDATE players SET team = NULL WHERE room_id = ?").run(roomId);
       }

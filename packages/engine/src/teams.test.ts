@@ -481,6 +481,43 @@ describe("missions at the start", () => {
     if (!d.ok) throw new Error(d.code);
     expect(d.state.phase).toBe("reinforce");
   });
+
+  it("the host's skipTurn chooses once per open team, both mates get the same card, then the game starts", () => {
+    const r = start(true);
+    if (!r.ok) throw new Error(r.code);
+    const o = r.state.secret.missionOffer;
+    const s = applyHostAction(
+      r.state,
+      { type: "skipTurn", turn: r.state.turn },
+      createSeededRng(3),
+    );
+    if (!s.ok) throw new Error(s.code);
+    expect(s.state.phase).toBe("reinforce");
+    const m = s.state.secret.mission;
+    expect(m["p1"]).toEqual(m["p2"]);
+    expect(m["p3"]).toEqual(m["p4"]);
+    expect(o["p1"]).toContainEqual(m["p1"]);
+    expect(o["p3"]).toContainEqual(m["p3"]);
+    // one missionChosen per team (the first open member), as with a choice of a player
+    const chosen = s.events.filter((e) => e.type === "missionChosen").map((e) => e.playerId);
+    expect(chosen).toHaveLength(2);
+  });
+
+  it("skipTurn after one team chose only chooses for the other team", () => {
+    const r = start(true);
+    if (!r.ok) throw new Error(r.code);
+    const c = applyAction(r.state, "p2", { type: "chooseMission", index: 1 }, noRng);
+    if (!c.ok) throw new Error(c.code);
+    const s = applyHostAction(
+      c.state,
+      { type: "skipTurn", turn: c.state.turn },
+      createSeededRng(3),
+    );
+    if (!s.ok) throw new Error(s.code);
+    expect(s.state.phase).toBe("reinforce");
+    expect(s.state.secret.mission["p1"]).toEqual(r.state.secret.missionOffer["p1"]![1]);
+    expect(s.state.secret.mission["p3"]).toEqual(s.state.secret.mission["p4"]);
+  });
 });
 
 describe("round limit in a team game (rules.md 11.2, 13)", () => {

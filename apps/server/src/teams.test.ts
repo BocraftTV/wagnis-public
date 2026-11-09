@@ -109,6 +109,22 @@ describe("lobby option teams", () => {
     t.c[0]!.send({ type: "randomTeams" });
     await t.c[0]!.waitFor(() => (errorsOf(t.c[0]!).includes("INVALID_TEAMS") ? true : undefined));
   });
+
+  it("choosing the layout that is already set keeps the assignment; a new layout clears it", async () => {
+    const t = await table(4);
+    t.c[0]!.send({ type: "settings", teams: "2v2" });
+    await t.c[1]!.nextView((w) => w.teams === "2v2");
+    t.c[0]!.send({ type: "randomTeams" });
+    await t.c[1]!.nextView((w) => w.players.every((p) => p.team !== null));
+    // the same layout again (a second tap on the pressed button), then another setting as a marker
+    t.c[0]!.send({ type: "settings", teams: "2v2" });
+    t.c[0]!.send({ type: "settings", worldEvents: true });
+    const v = await t.c[1]!.nextView((w) => w.worldEvents);
+    expect(v.players.every((p) => p.team !== null)).toBe(true);
+    t.c[0]!.send({ type: "settings", teams: "3v3" });
+    const w = await t.c[1]!.nextView((x) => x.teams === "3v3");
+    expect(w.players.every((p) => p.team === null)).toBe(true);
+  });
 });
 
 describe("starting and playing with teams", () => {
