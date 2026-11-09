@@ -589,7 +589,8 @@ async function weltSection({ port, base, post }) {
       return clients;
     };
     let clients = await connect();
-    await clients[0].until((v) => v.players.length === n, "all joined");
+    // Every client checks its own lobby view below, so each one waits for its own snapshot.
+    await Promise.all(clients.map((c) => c.until((v) => v.players.length === n, "all joined")));
     check(
       created.status === 201 && clients.every((c) => c.view.mapId === "welt"),
       `room on the world map (mapId in the lobby view: ${clients[0].view.mapId})`,
@@ -627,14 +628,26 @@ async function weltSection({ port, base, post }) {
         Object.values(g.handCounts).every((c) => c === 0),
       "44 cards (42 territories + 2 jokers) in the deck at the start",
     );
-    const missions = clients.map((c) => c.view.game.secret.mission);
+    // No mission is dealt twice, but whoever draws the elimination mission against themselves holds the map's
+    // fallback instead (rules.md 1.1). With two such draws, two players hold the same fallback.
+    const secrets = clients.map((c) => c.view.game.secret);
+    const missions = secrets.map((s) => s.mission);
+    const drawn = secrets.filter((s) => !s.missionReplaced).map((s) => JSON.stringify(s.mission));
+    const replaced = secrets.filter((s) => s.missionReplaced).map((s) => JSON.stringify(s.mission));
     check(
       missions.every((m) => m !== null) &&
-        new Set(missions.map((m) => JSON.stringify(m))).size === n &&
+        new Set(drawn).size === drawn.length &&
+        new Set(replaced).size <= 1 &&
+        !drawn.some((m) => replaced.includes(m)) &&
         clients.every((c, i) =>
-          missions.every((m, j) => j === i || !c.raw.join("\n").includes(JSON.stringify(m))),
+          missions.every(
+            (m, j) =>
+              j === i ||
+              JSON.stringify(m) === JSON.stringify(missions[i]) ||
+              !c.raw.join("\n").includes(JSON.stringify(m)),
+          ),
         ),
-      `${n} players: each has a different mission and sees no other player's`,
+      `${n} players: no mission dealt twice (${replaced.length} self-target draw(s) hold the fallback), none sees another player's`,
     );
     const wire = clients.map((c) => c.raw.join("\n")).join("\n");
     check(
