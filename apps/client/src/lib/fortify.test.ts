@@ -3,6 +3,9 @@ import type { GameViewMessage } from "@wagnis/shared";
 import { emptySelection } from "./attack.js";
 import {
   effectiveMove,
+  fortifyProgress,
+  isSendLocked,
+  movesDoneChanged,
   fortifyOrigins,
   fortifyTargets,
   pruneFortifySelection,
@@ -123,5 +126,34 @@ describe("effectiveMove", () => {
     expect(effectiveMove(9, 4)).toBe(4);
     expect(effectiveMove(0, 4)).toBe(1);
     expect(effectiveMove(null, 0)).toBe(0);
+  });
+});
+
+describe("fortifyProgress", () => {
+  it("shows the counter only for the two-move setting", () => {
+    expect(fortifyProgress({ ...connected, movesMax: 2 })).toBe("Verschiebung 1 von 2");
+    expect(fortifyProgress({ ...connected, movesMax: 2, movesDone: 1 })).toBe(
+      "Verschiebung 2 von 2",
+    );
+    expect(fortifyProgress(connected)).toBeNull();
+    expect(fortifyProgress(null)).toBeNull();
+  });
+});
+
+describe("movesDoneChanged", () => {
+  it("fires when the counter moved, not on the first look or without change", () => {
+    expect(movesDoneChanged(null, connected)).toBe(false);
+    expect(movesDoneChanged(0, connected)).toBe(false);
+    expect(movesDoneChanged(0, { ...connected, movesMax: 2, movesDone: 1 })).toBe(true);
+    expect(movesDoneChanged(1, null)).toBe(true); // the turn moved on
+  });
+});
+
+describe("isSendLocked", () => {
+  it("locks until a new version or another error arrives", () => {
+    expect(isSendLocked(null, 5, 0)).toBe(false);
+    expect(isSendLocked({ version: 5, errors: 0 }, 5, 0)).toBe(true);
+    expect(isSendLocked({ version: 5, errors: 0 }, 6, 0)).toBe(false);
+    expect(isSendLocked({ version: 5, errors: 0 }, 5, 1)).toBe(false);
   });
 });

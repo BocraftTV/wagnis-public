@@ -147,6 +147,9 @@ describe("messages", () => {
       settingsMessage({ mapId: "welt" }),
       settingsMessage({ victoryMode: "domination" }),
       settingsMessage({ mapId: "testland", victoryMode: "missions" }),
+      settingsMessage({ fortifyMoves: 1 }),
+      settingsMessage({ fortifyMoves: 2 }),
+      settingsMessage({ victoryMode: "domination", fortifyMoves: 2 }),
     ]) {
       expect(clientMessageSchema.safeParse(m).success, JSON.stringify(m)).toBe(true);
     }

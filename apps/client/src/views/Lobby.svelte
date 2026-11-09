@@ -5,10 +5,18 @@
   import HostMenu from "../components/HostMenu.svelte";
   import QrCode from "../components/QrCode.svelte";
   import { settingsMessage } from "../lib/host.js";
-  import { mapLabel, mapOptions, modeHint, modeLabel } from "../lib/mapname.js";
+  import {
+    fortifyHint,
+    fortifyLabel,
+    mapLabel,
+    mapOptions,
+    modeHint,
+    modeLabel,
+  } from "../lib/mapname.js";
   import { qrHint, qrTarget } from "../lib/qr/target.js";
 
   const modes = ["missions", "domination"] as const;
+  const moveChoices = [1, 2] as const;
   // testland is offered in a development build only
   const maps = mapOptions(import.meta.env.DEV);
 
@@ -93,10 +101,26 @@
       </div>
       <p class="muted">{mapLabel(view.mapId)}</p>
     </section>
+    <section aria-label="Verschiebungen pro Zug">
+      <h2>Verschiebungen pro Zug</h2>
+      <div class="seg" role="group" aria-label="Verschiebungen pro Zug">
+        {#each moveChoices as m (m)}
+          <button
+            class:secondary={view.fortifyMoves !== m}
+            aria-pressed={view.fortifyMoves === m}
+            onclick={() => conn.sendHost(settingsMessage({ fortifyMoves: m }))}
+            >{fortifyLabel(m)}</button
+          >
+        {/each}
+      </div>
+      <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
+    </section>
   {:else}
     <p class="map">Siegmodus: {modeLabel(view.victoryMode)}</p>
     <p class="muted">{modeHint(view.victoryMode)}</p>
     <p class="map">{mapLabel(view.mapId)}</p>
+    <p class="map">Verschiebungen: {fortifyLabel(view.fortifyMoves)}</p>
+    <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
   {/if}
 
   <h2>Spieler ({view.players.length}/6)</h2>

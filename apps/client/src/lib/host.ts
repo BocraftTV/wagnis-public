@@ -69,6 +69,7 @@ export const backToLobbyMessage = (): ClientMessage => ({ type: "backToLobby" })
 export const settingsMessage = (patch: {
   mapId?: "welt" | "testland";
   victoryMode?: "missions" | "domination";
+  fortifyMoves?: 1 | 2;
 }): ClientMessage => ({ type: "settings", ...patch });
 
 /** "Annas", "Max'" (names ending in s, ß, x or z take only the apostrophe). */

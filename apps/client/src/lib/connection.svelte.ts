@@ -40,6 +40,8 @@ export class GameConnection {
   status = $state<ConnStatus>("idle");
   view = $state.raw<RoomView | null>(null);
   notice = $state<string | null>(null);
+  /** Counts every notice shown, so the UI can tell a repeated identical error from none. */
+  noticeCount = $state(0);
 
   private roomId = "";
   private token = "";
@@ -182,6 +184,7 @@ export class GameConnection {
 
   private showNotice(text: string): void {
     this.notice = text;
+    this.noticeCount++;
     if (this.noticeTimer !== null) this.deps.clearTimer(this.noticeTimer);
     this.noticeTimer = this.deps.setTimer(() => (this.notice = null), NOTICE_MS);
   }

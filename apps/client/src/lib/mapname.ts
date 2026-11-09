@@ -26,3 +26,15 @@ export function mapOptions(dev: boolean): { id: "welt" | "testland"; label: stri
   if (dev) options.push({ id: "testland", label: getMap("testland")?.name ?? "Testland" });
   return options;
 }
+
+export type FortifyMoves = 1 | 2;
+
+/** Lobby choice of the moves per turn: label and one sentence of explanation. */
+export function fortifyLabel(moves: FortifyMoves): string {
+  return moves === 2 ? "Zwei Verschiebungen" : "Original";
+}
+export function fortifyHint(moves: FortifyMoves): string {
+  return moves === 2
+    ? "Bis zu zwei Verschiebungen pro Zug; „Zug beenden“ geht vorher."
+    : "Eine Verschiebung pro Zug, danach endet der Zug.";
+}

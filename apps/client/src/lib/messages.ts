@@ -64,3 +64,17 @@ export const phaseText = {
   attack: "Angriff",
   fortify: "Verschieben",
 } as const;
+
+/** Hint in the "Verschieben" bar; the counter variant only differs after the first move of two. */
+export function fortifyHintText(
+  state: "none" | "pick-origin" | "pick-target" | "ready",
+  movesDone: number,
+): string {
+  if (state === "none") return "Hier lässt sich nichts verschieben. „Zug beenden“ antippen.";
+  if (state === "pick-origin") {
+    return movesDone > 0
+      ? "Zweite Verschiebung möglich, oder „Zug beenden“ antippen."
+      : "Eigenes Gebiet antippen, aus dem du Armeen verschiebst (optional).";
+  }
+  return "Hervorgehobenes Ziel antippen.";
+}

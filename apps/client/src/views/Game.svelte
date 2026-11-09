@@ -15,10 +15,15 @@
   import {
     effectiveMove,
     fortifyOrigins,
+    fortifyProgress,
+    isSendLocked,
+    movesDoneChanged,
+    movesDoneOf,
     fortifyTargets,
     pruneFortifySelection,
     selectionAfterFortifyTap,
   } from "../lib/fortify.js";
+  import type { SendLock } from "../lib/fortify.js";
   import { planPlayback, playbackGate } from "../lib/dice.js";
   import type { Playback } from "../lib/dice.js";
   import CardHand from "../components/CardHand.svelte";
@@ -33,7 +38,7 @@
   import { armiesText } from "../lib/hint.js";
   import { backToLobbyMessage, canBackToLobby, nameWithMark, playerStatus } from "../lib/host.js";
   import type { TerritoryMark } from "../lib/mark.js";
-  import { phaseText } from "../lib/messages.js";
+  import { fortifyHintText, phaseText } from "../lib/messages.js";
   import { ownerColor, ownerName } from "../lib/owner.js";
   import { mapData } from "../maps/index.js";
 
@@ -158,8 +163,26 @@
     }
   }
 
+  // A duplicated `fortify` would be a valid second move (two-move setting): lock the button from sending
+  // until the next snapshot or an error arrives. Display only, the server still decides.
+  let moveLock = $state<SendLock | null>(null);
+  const moveLocked = $derived(isSendLocked(moveLock, view.version, conn.noticeCount));
+
+  // A move changes the counter: drop the old origin/target pair so a stray tap cannot use the second move.
+  let lastMovesDone: number | null = null;
+  $effect(() => {
+    const changed = movesDoneChanged(lastMovesDone, game.fortify);
+    lastMovesDone = fortifying ? movesDoneOf(game.fortify) : null;
+    if (changed && fortifying) {
+      selection = emptySelection;
+      chosenMove = null;
+    }
+  });
+
   function fortify() {
+    if (moveLocked) return;
     if (selection.from && selection.to && moveCount > 0) {
+      moveLock = { version: view.version, errors: conn.noticeCount };
       conn.sendAction({ type: "fortify", from: selection.from, to: selection.to, count: moveCount });
     }
   }
@@ -369,9 +392,10 @@
   {#if fortifying}
     <section class="bar" aria-label="Verschieben">
       <span class="hint">
-        {#if moveOrigins.length === 0}Hier lässt sich nichts verschieben. „Zug beenden“ antippen.
-        {:else if !selection.from}Eigenes Gebiet antippen, aus dem du Armeen verschiebst (optional).
-        {:else if !selection.to}Hervorgehobenes Ziel antippen.
+        {#if fortifyProgress(game.fortify)}<strong>{fortifyProgress(game.fortify)}</strong>{" "}{/if}
+        {#if moveOrigins.length === 0}{fortifyHintText("none", movesDoneOf(game.fortify))}
+        {:else if !selection.from}{fortifyHintText("pick-origin", movesDoneOf(game.fortify))}
+        {:else if !selection.to}{fortifyHintText("pick-target", movesDoneOf(game.fortify))}
         {:else}{describe(selection.from)} → {describe(selection.to)}: {moveCount} Armeen{/if}
       </span>
       {#if selection.to}
@@ -391,7 +415,9 @@
           >
         </div>
       {/if}
-      <button disabled={!selection.to || moveCount < 1} onclick={fortify}>Verschieben</button>
+      <button disabled={!selection.to || moveCount < 1 || moveLocked} onclick={fortify}
+        >Verschieben</button
+      >
     </section>
   {/if}
 
