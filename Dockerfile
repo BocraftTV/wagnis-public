@@ -1,5 +1,5 @@
-# Wagnis server image (linux/arm64 target: Raspberry Pi 5 running k3s).
-# Build: docker buildx build --platform linux/arm64 --build-arg NODE_VERSION=$(cat .node-version) -t wagnis:<tag> --load .
+# Wagnis server image. Published for linux/arm64 and linux/amd64 as ghcr.io/bocrafttv/wagnis by the public repo's image workflow.
+# Local build: docker buildx build --platform linux/arm64 --build-arg NODE_VERSION=$(cat .node-version) -t wagnis:<tag> --load .
 # Must match .node-version; the build command passes it from the file.
 ARG NODE_VERSION=24.18.0
 
