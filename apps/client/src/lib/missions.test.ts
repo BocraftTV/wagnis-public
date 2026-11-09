@@ -153,6 +153,7 @@ describe("winReasonText", () => {
   it("maps the delivered reason", () => {
     expect(winReasonText("lastPlayer")).toBe("als letzter verbliebener Spieler");
     expect(winReasonText("mission")).toBe("durch Erfüllen der Mission");
+    expect(winReasonText("roundLimit")).toBe("nach dem Rundenlimit");
     expect(winReasonText(null)).toBeNull();
   });
 });

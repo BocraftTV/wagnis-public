@@ -8,7 +8,7 @@ import {
   getMissionSet,
   getRules,
 } from "@wagnis/engine";
-import type { Rng } from "@wagnis/engine";
+import type { Rng, RoundLimit } from "@wagnis/engine";
 import {
   MAX_PLAYERS,
   WS_CLOSE_HELLO_FAILED,
@@ -112,6 +112,7 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
       fortifyMoves: room.fortifyMoves,
       missionDraft: room.missionDraft,
       holdToWin: room.holdToWin,
+      roundLimit: room.roundLimit,
     };
     const missions = map && getMissionSet(map.id);
     if (!map || !rules || !missions) return fail(conn.socket, "INTERNAL");
@@ -136,6 +137,7 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
       fortifyMoves?: 1 | 2 | undefined;
       missionDraft?: boolean | undefined;
       holdToWin?: boolean | undefined;
+      roundLimit?: RoundLimit | undefined;
     },
   ): void {
     const ctx = hostContext(conn);
@@ -304,6 +306,7 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
             fortifyMoves: msg.fortifyMoves,
             missionDraft: msg.missionDraft,
             holdToWin: msg.holdToWin,
+            roundLimit: msg.roundLimit,
           });
         case "host":
           return handleHost(conn, msg.action, msg.reqId);

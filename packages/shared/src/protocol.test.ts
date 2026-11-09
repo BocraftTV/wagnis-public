@@ -43,12 +43,15 @@ const view = {
   fortifyMoves: 1,
   missionDraft: false,
   holdToWin: false,
+  roundLimit: null,
   gameNo: 1,
   publicUrl: null,
   game: {
     mapId: "testland",
     phase: "reinforce",
     turn: 1,
+    round: 1,
+    roundLimit: null,
     activePlayerId: "p1",
     playerOrder: ["p1", "p2"],
     removedPlayerIds: [],
@@ -61,6 +64,8 @@ const view = {
     missionChoice: null,
     winnerId: null,
     winReason: null,
+    winnerIds: [],
+    scores: null,
     victoryMode: "missions",
     missions: null,
     lastCombat: null,
@@ -454,6 +459,7 @@ describe("phase 4 protocol: neutral owner, missions, resolution", () => {
   it("rejects bad resolution and win fields", () => {
     const g = (extra: object) => gameViewSchema.safeParse({ ...view.game, ...extra }).success;
     expect(g({ winReason: "timeout" })).toBe(false);
+    expect(g({ winReason: "roundLimit" })).toBe(true);
     expect(g({ victoryMode: "chaos" })).toBe(false);
     expect(g({ missions: { p1: { mission: null, originalMission: null } } })).toBe(false);
     expect(
@@ -567,6 +573,9 @@ describe("host protocol (phase 6a)", () => {
       { type: "settings", victoryMode: "missions" },
       { type: "settings", fortifyMoves: 1 },
       { type: "settings", fortifyMoves: 2 },
+      { type: "settings", roundLimit: 8 },
+      { type: "settings", roundLimit: 16 },
+      { type: "settings", roundLimit: null },
       { type: "settings", mapId: "welt", victoryMode: "domination", fortifyMoves: 2 },
       { type: "settings", mapId: "testland", fortifyMoves: 1 },
       { type: "settings", victoryMode: "missions", fortifyMoves: 2 },
@@ -586,6 +595,9 @@ describe("host protocol (phase 6a)", () => {
       { type: "settings", victoryMode: "chaos" },
       { type: "settings", mapId: "welt", extra: 1 },
       { type: "settings", fortifyMoves: 0 },
+      { type: "settings", roundLimit: 10 },
+      { type: "settings", roundLimit: "8" },
+      { type: "settings", roundLimit: 0 },
       { type: "settings", fortifyMoves: 3 },
       { type: "settings", fortifyMoves: "2" },
       { type: "settings", fortifyMoves: true },

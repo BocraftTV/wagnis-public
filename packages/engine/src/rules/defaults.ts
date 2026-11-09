@@ -6,6 +6,8 @@ export const defaultFortifyReach: RuleConfig["fortifyReach"] = "connected";
 export const defaultFortifyMoves: RuleConfig["fortifyMoves"] = 1;
 export const defaultMissionDraft = false;
 export const defaultHoldToWin = false;
+/** No round limit (plan 014 A, rules.md 11). */
+export const defaultRoundLimit: RuleConfig["roundLimit"] = null;
 
 export const defaultCardRules: CardRules = {
   jokers: 2,

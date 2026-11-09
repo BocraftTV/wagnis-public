@@ -42,6 +42,7 @@
     victoryPendingText,
     winReasonText,
   } from "../lib/missions.js";
+  import { roundText, scoreRows, winnersText } from "../lib/rounds.js";
   import { armiesText } from "../lib/hint.js";
   import { backToLobbyMessage, canBackToLobby, nameWithMark, playerStatus } from "../lib/host.js";
   import type { TerritoryMark } from "../lib/mark.js";
@@ -287,6 +288,7 @@
 
   // End of game: the reason and, once the view carries `missions`, every player's mission.
   const reasonText = $derived(winReasonText(game.winReason));
+  const scores = $derived(scoreRows(game.scores, game.winnerIds));
   const resolution = $derived(resolutionRows(game.missions, game.playerOrder, me, missionCtx));
 
   // Plan 013: progress of the own mission and the hold-to-win hint; both come ready from the view.
@@ -313,6 +315,7 @@
       <span class="swatch" style:background={colorOf(game.activePlayerId)}></span>
       <strong>{myTurn ? "Du bist am Zug" : `${playerName(game.activePlayerId)} ist am Zug`}</strong>
     </div>
+    <div>{roundText(game.round, game.roundLimit)}</div>
     <div>Phase: <strong>{phaseText[game.phase]}</strong></div>
     {#if game.phase === "reinforce"}
       <div>Zu setzen: <strong>{game.reinforcementsLeft}</strong></div>
@@ -351,7 +354,7 @@
 
   {#if finished && game.winnerId}
     <div class="winner" role="status">
-      🏆 {playerName(game.winnerId)}{game.winnerId === me ? " (du)" : ""} hat gewonnen{reasonText
+      🏆 {winnersText(game.winnerIds, game.winnerId, playerName, me)}{reasonText
         ? ` – ${reasonText}`
         : ""}
     </div>
@@ -368,6 +371,25 @@
       {:else}
         <p class="muted" role="status">Warte auf den Host …</p>
       {/if}
+    </section>
+  {/if}
+
+  {#if finished && scores.length > 0}
+    <section class="resolution" aria-label="Wertung">
+      <h2>Wertung nach {game.round} Runden</h2>
+      <ul>
+        {#each scores as row (row.playerId)}
+          <li>
+            <span class="swatch" style:background={colorOf(row.playerId)}></span>
+            <strong
+              >{row.winner ? "🏆 " : ""}{playerName(row.playerId)}{row.playerId === me
+                ? " (du)"
+                : ""}: {row.points} Punkte</strong
+            >
+            <span class="mission-line">{row.detail}, {row.armies} Armeen</span>
+          </li>
+        {/each}
+      </ul>
     </section>
   {/if}
 

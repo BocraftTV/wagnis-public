@@ -49,7 +49,7 @@ describe("Phase-5 states from the real server (plan 007, step 0)", () => {
   });
 
   it.each(withState.map((r) => [r.label] as const))(
-    "%s: is a version 4 state; loading migrates it to 7 without the Rng",
+    "%s: is a version 4 state; loading migrates it to 8 without the Rng",
     (label) => {
       const raw = states(label) as Record<string, unknown>;
       expect(raw["stateVersion"]).toBe(4);
@@ -68,11 +68,19 @@ describe("Phase-5 states from the real server (plan 007, step 0)", () => {
         stateVersion: _v,
         fortifyMovesDone: _d,
         conquestsThisTurn: _c,
+        round: _rd,
+        winnerIds: _wi,
         rules,
         secret,
         ...rest
       } = loaded.state;
-      const { fortifyMoves: _m, missionDraft: _md, holdToWin: _hw, ...rulesRest } = rules;
+      const {
+        fortifyMoves: _m,
+        missionDraft: _md,
+        holdToWin: _hw,
+        roundLimit: _rl,
+        ...rulesRest
+      } = rules;
       const {
         missionOffer: _mo,
         missionOfferDealt: _mod,

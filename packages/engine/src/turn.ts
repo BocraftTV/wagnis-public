@@ -2,7 +2,7 @@ import { drawCard } from "./cards.js";
 import { getMap } from "./maps/index.js";
 import { isEliminated } from "./players.js";
 import { calculateReinforcements } from "./reinforcement.js";
-import { checkTurnStart, markVictoryPending } from "./victory.js";
+import { checkTurnStart, finishByRoundLimit, markVictoryPending } from "./victory.js";
 import type { ActionResult, GameEvent, GameState, PlayerId, Rng } from "./types.js";
 
 /** Next player in seat order who has not been eliminated. */
@@ -33,6 +33,15 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
   const after = drawn.state;
   const allEvents = [...events, ...drawn.events];
   const nextId = nextPlayer(after);
+  // A new round starts when the turn order wraps around (rules.md 11.1): the next player is not behind the
+  // current one in seat order. After the last round the game is scored instead of passing the turn on (11.2).
+  const wraps =
+    after.playerOrder.indexOf(nextId) <= after.playerOrder.indexOf(after.activePlayerId);
+  const limit = after.rules.roundLimit;
+  if (wraps && limit !== null && after.round >= limit) {
+    return { ok: true, ...finishByRoundLimit(after, allEvents) };
+  }
+  const round = wraps ? after.round + 1 : after.round;
   const reinforcements = calculateReinforcements(map, after.rules, after.territories, nextId);
   const turn = after.turn + 1;
   const next: GameState = {
@@ -40,6 +49,7 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
     activePlayerId: nextId,
     phase: "reinforce",
     turn,
+    round,
     reinforcementsLeft: reinforcements,
     conqueredThisTurn: false,
     conquestsThisTurn: 0,
@@ -52,6 +62,7 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
     ok: true,
     ...checkTurnStart(next, [
       ...allEvents,
+      ...(wraps ? [{ type: "roundStarted" as const, round }] : []),
       { type: "phaseChanged", playerId: nextId, phase: "reinforce" },
       { type: "turnStarted", playerId: nextId, turn, reinforcements },
     ]),

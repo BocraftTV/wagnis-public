@@ -154,7 +154,12 @@ describe("mission draft: choosing", () => {
     expect(r.state.phase).toBe("reinforce");
     expect(r.state.reinforcementsLeft).toBeGreaterThan(0);
     expect(r.state.turn).toBe(1);
-    expect(r.events.map((e) => e.type)).toEqual(["missionChosen", "phaseChanged", "turnStarted"]);
+    expect(r.events.map((e) => e.type)).toEqual([
+      "missionChosen",
+      "roundStarted",
+      "phaseChanged",
+      "turnStarted",
+    ]);
   });
 
   it("the chosen card becomes the mission, the other the discarded one; the offers are gone", () => {

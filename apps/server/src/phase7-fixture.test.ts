@@ -85,7 +85,7 @@ const withState = fixture.rooms.filter((r) => r.label !== "lobby").map((r) => r.
 
 describe("loadState with the Phase-7 fixture (plan 011, step 1)", () => {
   it.each(withState)(
-    "%s: version 5 loads as 7 with fortifyMoves 1 and fortifyMovesDone 0, is written back once, a second load writes nothing",
+    "%s: version 5 loads as 8 with fortifyMoves 1 and fortifyMovesDone 0, is written back once, a second load writes nothing",
     (label) => {
       const { roomId, stored } = seed(label);
       expect((JSON.parse(stored) as { stateVersion: number }).stateVersion).toBe(5);
@@ -93,12 +93,12 @@ describe("loadState with the Phase-7 fixture (plan 011, step 1)", () => {
       const first = loadState(store, store.getRoom(roomId)!, noRng);
       expect(first.ok).toBe(true);
       if (!first.ok || !first.state) throw new Error("not loaded");
-      expect(first.state.stateVersion).toBe(7);
+      expect(first.state.stateVersion).toBe(8);
       expect(first.state.rules.fortifyMoves).toBe(1);
       expect(first.state.fortifyMovesDone).toBe(0);
       const written = rawRow(roomId);
       expect(written).not.toBe(stored);
-      expect((JSON.parse(written) as GameState).stateVersion).toBe(7);
+      expect((JSON.parse(written) as GameState).stateVersion).toBe(8);
       expect(JSON.parse(written)).toEqual(JSON.parse(JSON.stringify(first.state)));
       const second = loadState(store, store.getRoom(roomId)!, noRng);
       expect(second.ok && second.state).toEqual(first.state);
@@ -225,14 +225,14 @@ describe("old database before plan 011 (fixture from the real server, plan 011 s
     expect(fixture.schemaMetaVersion).toBe(3);
   });
 
-  it("opening it adds fortify_moves = 1 to every row, schema version 5, and a second open changes nothing", async () => {
+  it("opening it adds fortify_moves = 1 to every row, schema version 6, and a second open changes nothing", async () => {
     seedOld();
     const old = new Map(fixture.rooms.map((r) => [r.room.id, r.room]));
     await (await boot()).close();
     servers.pop();
     const db = new Database(dbPath, { readonly: true });
     const rooms = db.prepare("SELECT * FROM rooms").all() as Record<string, unknown>[];
-    expect(db.prepare("SELECT version FROM schema_meta").all()).toEqual([{ version: 5 }]);
+    expect(db.prepare("SELECT version FROM schema_meta").all()).toEqual([{ version: 6 }]);
     db.close();
     expect(rooms).toHaveLength(5);
     for (const r of rooms) {
@@ -253,7 +253,7 @@ describe("old database before plan 011 (fixture from the real server, plan 011 s
     expect(dumpAll()).toBe(first);
   });
 
-  it("the room in the fortify phase loads as version 7, is written back once and ends the turn with one move", async () => {
+  it("the room in the fortify phase loads as version 8, is written back once and ends the turn with one move", async () => {
     seedOld();
     const ids = identities("playing-2p-neutral-fortify");
     const roomId = ids[0]!.roomId;
@@ -262,7 +262,7 @@ describe("old database before plan 011 (fixture from the real server, plan 011 s
     for (const id of ids) cs.push(await connect(srv, id));
     const first = cs[0]!.views().at(-1)!;
     expect(first.fortifyMoves).toBe(1);
-    expect((JSON.parse(rawRow(roomId)) as GameState).stateVersion).toBe(7);
+    expect((JSON.parse(rawRow(roomId)) as GameState).stateVersion).toBe(8);
     const activeIdx = ids.findIndex((i) => i.playerId === first.game!.activePlayerId);
     const f = (await cs[activeIdx]!.latestView()).game!.fortify!;
     expect(f).toMatchObject({ movesDone: 0, movesMax: 1 });
@@ -293,7 +293,7 @@ describe("old database before plan 011 (fixture from the real server, plan 011 s
     const state = JSON.parse(rawRow(ids[0]!.roomId)) as GameState;
     expect(state.rules.fortifyMoves).toBe(2);
     expect(state.fortifyMovesDone).toBe(0);
-    expect(state.stateVersion).toBe(7);
+    expect(state.stateVersion).toBe(8);
   });
 
   it("the finished room stays finished and keeps fortify_moves 1", async () => {

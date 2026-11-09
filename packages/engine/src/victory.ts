@@ -1,6 +1,7 @@
 import { getMap } from "./maps/index.js";
 import { missionSatisfied } from "./missions.js";
 import { isEliminated } from "./players.js";
+import { scoreboard, scoreWinners } from "./scoring.js";
 import type { GameEvent, GameState, Mission, PlayerId, WinReason } from "./types.js";
 
 /**
@@ -26,7 +27,13 @@ function declareWinner(
   reason: WinReason,
 ): { state: GameState; events: GameEvent[] } {
   return {
-    state: { ...state, winnerId, winReason: reason, pendingOccupation: null },
+    state: {
+      ...state,
+      winnerId,
+      winnerIds: [winnerId],
+      winReason: reason,
+      pendingOccupation: null,
+    },
     events: [...events, { type: "gameWon", playerId: winnerId, reason }],
   };
 }
@@ -125,4 +132,43 @@ export function checkVictory(
     return declareWinner(state, events, active, "mission");
   }
   return { state, events };
+}
+
+/**
+ * End of the last round (plan 014 A, rules.md 11.2), called by `endTurn` once the turn of the last player of round
+ * `roundLimit` is over. First a held mission (plan 013, question 53): the first player in turn order whose marker is
+ * set and whose mission is still met wins by mission, before the score. Otherwise the score decides: most points,
+ * then most armies; all who are level win together (`winnerIds`, `winnerId` is the first of them in seat order).
+ */
+export function finishByRoundLimit(
+  state: GameState,
+  events: GameEvent[],
+): { state: GameState; events: GameEvent[] } {
+  const map = getMap(state.mapId);
+  if (map) {
+    for (const p of state.playerOrder) {
+      if (isEliminated(state, p) || !state.secret.victoryPending[p]) continue;
+      if (isHeldMission(state, state.secret.mission[p] ?? null) && missionSatisfied(state, map, p))
+        return declareWinner(state, events, p, "mission");
+    }
+  }
+  const winners = scoreWinners(scoreboard(state));
+  const first = winners[0] ?? state.activePlayerId;
+  return {
+    state: {
+      ...state,
+      winnerId: first,
+      winnerIds: winners.length > 0 ? winners : [first],
+      winReason: "roundLimit",
+      pendingOccupation: null,
+    },
+    events: [
+      ...events,
+      ...(winners.length > 0 ? winners : [first]).map((playerId): GameEvent => ({
+        type: "gameWon",
+        playerId,
+        reason: "roundLimit",
+      })),
+    ],
+  };
 }

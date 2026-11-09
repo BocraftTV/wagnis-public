@@ -36,6 +36,7 @@ export function makeState(spec: StateSpec): GameState {
     activePlayerId: spec.active ?? players[0]!,
     phase: spec.phase ?? "attack",
     turn: 1,
+    round: 1,
     reinforcementsLeft: 0,
     territories,
     secret: {
@@ -56,6 +57,7 @@ export function makeState(spec: StateSpec): GameState {
     fortifyMovesDone: 0,
     winnerId: null,
     winReason: null,
+    winnerIds: [],
     removedPlayerIds: [],
     stateVersion: STATE_VERSION,
     lastCombat: null,

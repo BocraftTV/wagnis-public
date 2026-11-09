@@ -4,6 +4,7 @@ import { getMap } from "./maps/index.js";
 import { largestRealm } from "./missions.js";
 import { isEliminated } from "./players.js";
 import { pendingChoosers } from "./mission-choice.js";
+import { scoreboard } from "./scoring.js";
 import type {
   Card,
   CombatRecord,
@@ -172,6 +173,8 @@ export function viewFor(state: GameState, playerId: PlayerId): GameView {
     mapId: state.mapId,
     phase: state.phase,
     turn: state.turn,
+    round: state.round,
+    roundLimit: state.rules.roundLimit,
     activePlayerId: state.activePlayerId,
     playerOrder: [...state.playerOrder],
     removedPlayerIds: [...state.removedPlayerIds],
@@ -210,6 +213,8 @@ export function viewFor(state: GameState, playerId: PlayerId): GameView {
         : null,
     winnerId: state.winnerId,
     winReason: state.winReason,
+    winnerIds: [...state.winnerIds],
+    scores: state.winReason === "roundLimit" ? scoreboard(state) : null,
     victoryMode: state.rules.victoryMode,
     missions: revealMissions(state),
     lastCombat: state.lastCombat ? copyCombat(state.lastCombat) : null,

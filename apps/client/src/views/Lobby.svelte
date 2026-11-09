@@ -18,6 +18,12 @@
     modeLabel,
   } from "../lib/mapname.js";
   import { qrHint, qrTarget } from "../lib/qr/target.js";
+  import {
+    roundLimitChoices,
+    roundLimitHint,
+    roundLimitLabel,
+    roundLimitSectionLabel,
+  } from "../lib/rounds.js";
 
   const modes = ["missions", "domination"] as const;
   const moveChoices = [1, 2] as const;
@@ -119,6 +125,20 @@
       </div>
       <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
     </section>
+    <section aria-label={roundLimitSectionLabel}>
+      <h2>{roundLimitSectionLabel}</h2>
+      <div class="seg" role="group" aria-label={roundLimitSectionLabel}>
+        {#each roundLimitChoices as r (r)}
+          <button
+            class:secondary={view.roundLimit !== r}
+            aria-pressed={view.roundLimit === r}
+            onclick={() => conn.sendHost(settingsMessage({ roundLimit: r }))}
+            >{r === null ? "Aus" : r}</button
+          >
+        {/each}
+      </div>
+      <p class="muted">{roundLimitHint(view.roundLimit)}</p>
+    </section>
     {#if view.victoryMode === "missions"}
       <section aria-label="Missions-Optionen">
         <h2>Missionen</h2>
@@ -158,6 +178,8 @@
     <p class="map">{mapLabel(view.mapId)}</p>
     <p class="map">Verschiebungen: {fortifyLabel(view.fortifyMoves)}</p>
     <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
+    <p class="map">Rundenlimit: {roundLimitLabel(view.roundLimit)}</p>
+    <p class="muted">{roundLimitHint(view.roundLimit)}</p>
     {#if view.victoryMode === "missions"}
       <p class="map">Missionen: {view.missionDraft ? missionDraftLabel : "Eine Mission"}</p>
       <p class="muted">{missionDraftHint(view.missionDraft)}</p>

@@ -69,6 +69,7 @@ function view(o: {
     fortifyMoves: 1,
     missionDraft: false,
     holdToWin: false,
+    roundLimit: null,
     gameNo: 1,
     publicUrl: null,
     game,
@@ -161,6 +162,8 @@ describe("messages", () => {
       settingsMessage({ victoryMode: "domination", fortifyMoves: 2 }),
       settingsMessage({ missionDraft: true }),
       settingsMessage({ holdToWin: false, missionDraft: true }),
+      settingsMessage({ roundLimit: 12 }),
+      settingsMessage({ roundLimit: null }),
     ]) {
       expect(clientMessageSchema.safeParse(m).success, JSON.stringify(m)).toBe(true);
     }

@@ -75,6 +75,7 @@ const snapshot = (version: number) => ({
     fortifyMoves: 1,
     missionDraft: false,
     holdToWin: false,
+    roundLimit: null,
     gameNo: 1,
     publicUrl: null,
     game: null,

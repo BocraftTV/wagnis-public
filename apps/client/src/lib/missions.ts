@@ -109,6 +109,7 @@ export function resolutionRows(
 export function winReasonText(reason: GameViewMessage["winReason"]): string | null {
   if (reason === "lastPlayer") return "als letzter verbliebener Spieler";
   if (reason === "mission") return "durch Erfüllen der Mission";
+  if (reason === "roundLimit") return "nach dem Rundenlimit";
   return null;
 }
 

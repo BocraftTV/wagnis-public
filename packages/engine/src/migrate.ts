@@ -1,5 +1,11 @@
 import { normalizeState } from "./normalize.js";
-import type { GameStateV3, GameStateV4, GameStateV5, GameStateV6 } from "./normalize.js";
+import type {
+  GameStateV3,
+  GameStateV4,
+  GameStateV5,
+  GameStateV6,
+  GameStateV7,
+} from "./normalize.js";
 import { STATE_VERSION } from "./state-version.js";
 import type { GameState, MigrateErrorCode, Rng } from "./types.js";
 
@@ -57,7 +63,7 @@ export function migrate5to6(state: GameStateV5): GameStateV6 {
  * `blitzkrieg`, which old states do not have); no mission offers, nothing discarded, no pending victory, both
  * mission options off (rules.md 1.5). Builds a new object; the input is not touched, no `Rng`.
  */
-export function migrate6to7(state: GameStateV6): GameState {
+export function migrate6to7(state: GameStateV6): GameStateV7 {
   const none = Object.fromEntries(state.playerOrder.map((p) => [p, null]));
   return {
     ...state,
@@ -75,6 +81,21 @@ export function migrate6to7(state: GameStateV6): GameState {
 }
 
 /**
+ * 7 -> 8 (plan 014 A): no round limit. `round` is only a display value for games that have no limit, so the
+ * approximation `ceil(turn / players)` is enough (exact if nobody was eliminated); `winnerIds` is the winner, if any
+ * (rules.md 1.5, 11). Builds a new object; the input is not touched, no `Rng`.
+ */
+export function migrate7to8(state: GameStateV7): GameState {
+  return {
+    ...state,
+    rules: { ...state.rules, roundLimit: null },
+    round: Math.max(1, Math.ceil(state.turn / Math.max(1, state.playerOrder.length))),
+    winnerIds: state.winnerId !== null ? [state.winnerId] : [],
+    stateVersion: 8,
+  };
+}
+
+/**
  * One step per version: `MIGRATIONS[n]` turns a version-n state into a version-(n+1) state. Typed loosely on
  * purpose, each step knows its own input and output format.
  */
@@ -83,6 +104,7 @@ const MIGRATIONS: Record<number, (state: never) => unknown> = {
   4: migrate4to5,
   5: migrate5to6,
   6: migrate6to7,
+  7: migrate7to8,
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>

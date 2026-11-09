@@ -35,7 +35,7 @@ export interface CardRules {
 export type Owner = PlayerId | null;
 
 export type VictoryMode = "missions" | "domination";
-export type WinReason = "lastPlayer" | "mission";
+export type WinReason = "lastPlayer" | "mission" | "roundLimit";
 
 /** Secret win condition (rules.md 1.1). Data only; the texts are made by the client. */
 export type Mission =
@@ -72,7 +72,12 @@ export interface RuleConfig {
   missionDraft: boolean;
   /** Plan 013: a met mission only wins at the start of the holder's next turn (rules.md 1.2). Only in `"missions"`. */
   holdToWin: boolean;
+  /** Plan 014 (A): after this many rounds the game is scored; `null` means no limit. Lobby choice of the host (rules.md 11). */
+  roundLimit: RoundLimit;
 }
+
+/** Offered round limits (rules.md 11, question 50); `null` is off. */
+export type RoundLimit = null | 8 | 12 | 16;
 
 export type Phase = "missionChoice" | "reinforce" | "attack" | "fortify";
 
@@ -112,6 +117,8 @@ export interface GameState {
   phase: Phase;
   /** 1-based count of turns played so far, including the current one. */
   turn: number;
+  /** 1-based round: every player still in has been at turn once per round (rules.md 11.1). Public. */
+  round: number;
   reinforcementsLeft: number;
   territories: Record<TerritoryId, TerritoryState>;
   secret: SecretState;
@@ -127,6 +134,8 @@ export interface GameState {
   winnerId: PlayerId | null;
   /** Set together with `winnerId`. */
   winReason: WinReason | null;
+  /** All winners (more than one only on a tie after the round limit, rules.md 11.2); empty until the game is won, otherwise `winnerId` comes first. */
+  winnerIds: PlayerId[];
   /** Players removed by the host, in the order of removal; they stay in `playerOrder` (rules.md 1.6). Public. */
   removedPlayerIds: PlayerId[];
   /** Format of the stored state (`STATE_VERSION`); internal, never in a view. */
@@ -270,6 +279,7 @@ export type MigrateErrorCode = "STATE_VERSION_INVALID" | "STATE_VERSION_UNSUPPOR
 
 export type GameEvent =
   | { type: "gameStarted"; firstPlayerId: PlayerId }
+  | { type: "roundStarted"; round: number }
   | { type: "turnStarted"; playerId: PlayerId; turn: number; reinforcements: number }
   /** Public, without the mission (plan 013). */
   | { type: "missionChosen"; playerId: PlayerId }
@@ -395,10 +405,26 @@ export interface SecretView {
   mustTrade: boolean;
 }
 
+/** One line of the score after the round limit (rules.md 11.2). Public once the game is over. */
+export interface ScoreEntry {
+  playerId: PlayerId;
+  territories: number;
+  /** Sum of the bonuses of the continents held completely. */
+  continentBonus: number;
+  /** `territories + continentBonus`. */
+  points: number;
+  /** All armies on the player's territories (the tie-break). */
+  armies: number;
+}
+
 export interface GameView {
   mapId: string;
   phase: Phase;
   turn: number;
+  /** 1-based round (rules.md 11.1). */
+  round: number;
+  /** The room's round limit, or null (no limit). */
+  roundLimit: RoundLimit;
   activePlayerId: PlayerId;
   playerOrder: PlayerId[];
   /** Players the host removed, in the order of removal; public, the same for every viewer (rules.md 7). */
@@ -416,6 +442,10 @@ export interface GameView {
   winnerId: PlayerId | null;
   /** Set together with `winnerId`, otherwise null. */
   winReason: WinReason | null;
+  /** All winners (several only on a tie after the round limit); empty until the game is won. */
+  winnerIds: PlayerId[];
+  /** The score of the round limit, only with `winReason: "roundLimit"`; otherwise null. */
+  scores: ScoreEntry[] | null;
   victoryMode: VictoryMode;
   /**
    * The resolution of all missions: only once `winnerId` is set (and never in `"domination"`), otherwise null.

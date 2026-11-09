@@ -71,6 +71,18 @@ export const tradeRecordSchema = z.object({
   bonusTerritoryId: z.string().nullable(),
 });
 
+/** Round limit of the room (plan 014 A, rules.md 11): `null` is off, otherwise 8, 12 or 16 rounds. */
+export const roundLimitSchema = z.union([z.literal(8), z.literal(12), z.literal(16), z.null()]);
+
+/** One line of the score after the round limit (rules.md 11.2). */
+const scoreEntrySchema = z.object({
+  playerId: z.string(),
+  territories: z.number().int(),
+  continentBonus: z.number().int(),
+  points: z.number().int(),
+  armies: z.number().int(),
+});
+
 /** Fortify moves per turn (rules.md 5.3): the room setting, 1 or 2. */
 export const fortifyMovesSchema = z.union([z.literal(1), z.literal(2)]);
 
@@ -96,6 +108,9 @@ export const gameViewSchema = z.object({
   mapId: z.string(),
   phase: phaseSchema,
   turn: z.number().int(),
+  /** 1-based round (rules.md 11.1) and the room's limit, or null. */
+  round: z.number().int().min(1),
+  roundLimit: roundLimitSchema,
   activePlayerId: z.string(),
   playerOrder: z.array(z.string()),
   /** Players the host removed (rules.md 1.6); public. */
@@ -127,7 +142,11 @@ export const gameViewSchema = z.object({
   /** During phase `missionChoice`: who has already chosen (not what); otherwise null. */
   missionChoice: z.object({ chosen: z.array(z.string()) }).nullable(),
   winnerId: z.string().nullable(),
-  winReason: z.enum(["lastPlayer", "mission"]).nullable(),
+  winReason: z.enum(["lastPlayer", "mission", "roundLimit"]).nullable(),
+  /** All winners (several only on a tie after the round limit); empty until the game is won. */
+  winnerIds: z.array(z.string()),
+  /** The score, only with `winReason: "roundLimit"`; otherwise null. */
+  scores: z.array(scoreEntrySchema).nullable(),
   victoryMode: victoryModeSchema,
   /** The resolution, only once `winnerId` is set. `originalMission` is set only if the mission was replaced. */
   missions: z
@@ -192,6 +211,8 @@ export const roomViewSchema = z.object({
   /** Plan 013: the options for the missions; the lobby choice, once the game runs the value in the game state (public). */
   missionDraft: z.boolean(),
   holdToWin: z.boolean(),
+  /** Plan 014 A: the round limit; the lobby choice, once the game runs the value in the game state (public). */
+  roundLimit: roundLimitSchema,
   /** Number of the game in this room, from 1; rises with every "back to the lobby" (public). */
   gameNo: z.number().int().min(1),
   /**

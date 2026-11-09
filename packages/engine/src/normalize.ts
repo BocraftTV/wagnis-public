@@ -15,7 +15,13 @@ import type {
 /** Rules as saved before phase 3: no `fortifyReach`, no `cards` (or only part of them). */
 type LegacyRules = Omit<
   RuleConfig,
-  "fortifyReach" | "fortifyMoves" | "cards" | "victoryMode" | "missionDraft" | "holdToWin"
+  | "fortifyReach"
+  | "fortifyMoves"
+  | "cards"
+  | "victoryMode"
+  | "missionDraft"
+  | "holdToWin"
+  | "roundLimit"
 > & {
   fortifyReach?: RuleConfig["fortifyReach"];
   cards?: Partial<Omit<CardRules, "tradeValues">> & {
@@ -37,8 +43,13 @@ export type GameStateV3 = Omit<
   | "removedPlayerIds"
   | "fortifyMovesDone"
   | "conquestsThisTurn"
+  | "round"
+  | "winnerIds"
 > & {
-  rules: Omit<RuleConfig, "victoryMode" | "fortifyMoves" | "missionDraft" | "holdToWin">;
+  rules: Omit<
+    RuleConfig,
+    "victoryMode" | "fortifyMoves" | "missionDraft" | "holdToWin" | "roundLimit"
+  >;
   secret: Omit<
     SecretState,
     | "mission"
@@ -53,15 +64,21 @@ export type GameStateV3 = Omit<
   };
 };
 
+/** The state format of plan 013 (version 7): everything of version 8 except `round`, `winnerIds` and `rules.roundLimit` (plan 014 A). */
+export type GameStateV7 = Omit<GameState, "round" | "winnerIds" | "rules" | "stateVersion"> & {
+  rules: Omit<RuleConfig, "roundLimit">;
+  stateVersion: 7;
+};
+
 /**
  * The state format of plan 011 (version 6): everything of version 7 except the plan 013 fields (`conquestsThisTurn`,
  * `rules.missionDraft`/`holdToWin`, `secret.missionOffer`/`discardedMission`/`victoryPending`).
  */
 export type GameStateV6 = Omit<
-  GameState,
+  GameStateV7,
   "conquestsThisTurn" | "rules" | "secret" | "stateVersion"
 > & {
-  rules: Omit<RuleConfig, "missionDraft" | "holdToWin">;
+  rules: Omit<RuleConfig, "missionDraft" | "holdToWin" | "roundLimit">;
   secret: Omit<
     SecretState,
     "missionOffer" | "missionOfferDealt" | "discardedMission" | "victoryPending"

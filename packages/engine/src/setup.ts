@@ -50,6 +50,8 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     return { ok: false, code: "INVALID_RULES" };
   if (typeof rules.missionDraft !== "boolean" || typeof rules.holdToWin !== "boolean")
     return { ok: false, code: "INVALID_RULES" };
+  if (![null, 8, 12, 16].includes(rules.roundLimit as number | null))
+    return { ok: false, code: "INVALID_RULES" };
   // Below 5 cards a hand can lack a valid set, so a mandatory trade could get stuck (rules.md 6).
   if (!Number.isInteger(rules.cards.mustTradeAt) || rules.cards.mustTradeAt < 5)
     return { ok: false, code: "INVALID_RULES" };
@@ -106,6 +108,7 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     activePlayerId: firstPlayerId,
     phase: draft ? "missionChoice" : "reinforce",
     turn: 1,
+    round: 1,
     reinforcementsLeft: draft ? 0 : reinforcements,
     territories,
     secret: {
@@ -128,6 +131,7 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     fortifyMovesDone: 0,
     winnerId: null,
     winReason: null,
+    winnerIds: [],
     removedPlayerIds: [],
     stateVersion: STATE_VERSION,
     lastCombat: null,
@@ -139,6 +143,7 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
   if (draft) return { ok: true, state, events: [{ type: "gameStarted", firstPlayerId }] };
   const events: GameEvent[] = [
     { type: "gameStarted", firstPlayerId },
+    { type: "roundStarted", round: 1 },
     { type: "turnStarted", playerId: firstPlayerId, turn: 1, reinforcements },
   ];
   // Start of the first player's turn: same check as at every turn start (never wins with the map lists (checked for testland and welt)).

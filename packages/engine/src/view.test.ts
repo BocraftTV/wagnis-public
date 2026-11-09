@@ -79,6 +79,9 @@ describe("viewFor", () => {
         "playerOrder",
         "reinforcementsLeft",
         "removedPlayerIds",
+        "round",
+        "roundLimit",
+        "scores",
         "secret",
         "territories",
         "turn",
@@ -86,6 +89,7 @@ describe("viewFor", () => {
         "victoryPending",
         "winReason",
         "winnerId",
+        "winnerIds",
         "missions",
       ].sort(),
     );

@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import { defaultFortifyMoves } from "@wagnis/engine";
-import type { GameState } from "@wagnis/engine";
+import type { GameState, RoundLimit } from "@wagnis/engine";
 import { MAX_PLAYERS } from "@wagnis/shared";
 import type { MapId, RoomStatus } from "@wagnis/shared";
 
@@ -20,6 +20,8 @@ export interface RoomRow {
   /** Mission options chosen in the lobby (plan 013); a running game uses the values in its state. */
   missionDraft: boolean;
   holdToWin: boolean;
+  /** Round limit chosen in the lobby (plan 014 A), `null` = off; a running game uses the value in its state. */
+  roundLimit: RoundLimit;
   /** Number of the game in this room, from 1; rises with every "back to the lobby". */
   gameNo: number;
   stateJson: string | null;
@@ -59,7 +61,8 @@ CREATE TABLE IF NOT EXISTS rooms (
   last_activity_at INTEGER NOT NULL DEFAULT 0,
   fortify_moves INTEGER NOT NULL DEFAULT 1,
   mission_draft INTEGER NOT NULL DEFAULT 0,
-  hold_to_win INTEGER NOT NULL DEFAULT 0
+  hold_to_win INTEGER NOT NULL DEFAULT 0,
+  round_limit INTEGER
 );
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
@@ -75,7 +78,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS players_room_name ON players (room_id, lower(n
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
 `;
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 export class Store {
   private readonly db: Database.Database;
@@ -97,7 +100,7 @@ export class Store {
    * `players.removed` (0). All in one transaction; rows are not rewritten otherwise, and opening an up-to-date
    * database changes nothing. Version 4 (plan 011) adds `rooms.fortify_moves` (old rows: 1, the one fortify move per
    * turn every room had until then). Version 5 (plan 013) adds `rooms.mission_draft` and `rooms.hold_to_win` (old rows: 0,
-   * both options off).
+   * both options off). Version 6 (plan 014 A) adds `rooms.round_limit` (old rows: NULL, no limit).
    */
   private upgrade(): void {
     const has = (table: string, column: string): boolean =>
@@ -125,6 +128,9 @@ export class Store {
     }
     if (!has("rooms", "hold_to_win")) {
       this.db.exec("ALTER TABLE rooms ADD COLUMN hold_to_win INTEGER NOT NULL DEFAULT 0");
+    }
+    if (!has("rooms", "round_limit")) {
+      this.db.exec("ALTER TABLE rooms ADD COLUMN round_limit INTEGER");
     }
     if (!has("players", "removed")) {
       this.db.exec("ALTER TABLE players ADD COLUMN removed INTEGER NOT NULL DEFAULT 0");
@@ -158,6 +164,7 @@ export class Store {
       fortifyMoves: r["fortify_moves"] as 1 | 2,
       missionDraft: r["mission_draft"] === 1,
       holdToWin: r["hold_to_win"] === 1,
+      roundLimit: (r["round_limit"] as RoundLimit | null | undefined) ?? null,
       gameNo: r["game_no"] as number,
       stateJson: r["state_json"] as string | null,
       version: r["version"] as number,
@@ -321,6 +328,7 @@ export class Store {
       fortifyMoves?: 1 | 2 | undefined;
       missionDraft?: boolean | undefined;
       holdToWin?: boolean | undefined;
+      roundLimit?: RoundLimit | undefined;
     },
     now: number,
   ): boolean {
@@ -344,6 +352,10 @@ export class Store {
         this.db
           .prepare("UPDATE rooms SET hold_to_win = ? WHERE id = ?")
           .run(patch.holdToWin ? 1 : 0, roomId);
+      if (patch.roundLimit !== undefined)
+        this.db
+          .prepare("UPDATE rooms SET round_limit = ? WHERE id = ?")
+          .run(patch.roundLimit, roomId);
       this.db
         .prepare(
           "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",

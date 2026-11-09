@@ -560,7 +560,7 @@ describe("back to the lobby", () => {
     const state = stored(t.roomId);
     expect(state.combatSeq).toBe(0);
     expect(state.tradeSeq).toBe(0);
-    expect(state.stateVersion).toBe(7);
+    expect(state.stateVersion).toBe(8);
     expect(state.playerOrder).toHaveLength(3);
     expect(g.version).toBeGreaterThan(v0.version);
   });
@@ -586,7 +586,7 @@ describe("a state with a newer version and host messages", () => {
         }
       ).state_json,
     ) as Record<string, unknown>;
-    raw["stateVersion"] = 8;
+    raw["stateVersion"] = 9;
     db.prepare("UPDATE rooms SET state_json = ? WHERE id = ?").run(JSON.stringify(raw), roomId);
     db.close();
     const before = dump(roomId);

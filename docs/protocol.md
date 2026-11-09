@@ -65,6 +65,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
 { "type": "start" }
 { "type": "settings", "mapId": "welt", "victoryMode": "domination" }
 { "type": "settings", "fortifyMoves": 2 }
+{ "type": "settings", "roundLimit": 12 }
 { "type": "settings", "missionDraft": true, "holdToWin": true }
 { "type": "host", "reqId": "h1", "action": { "type": "skipTurn", "turn": 12 } }
 { "type": "host", "reqId": "h2", "action": { "type": "removePlayer", "playerId": "9a2e…" } }
@@ -88,6 +89,8 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
   unbekannte Werte (z. B. `0`, `3`, `"2"`, `true`) und zusätzliche Felder ebenso. Jede Änderung erhöht `version` und geht als
   Snapshot an alle. In einer laufenden oder beendeten Partie ändert sich die Einstellung nie (`NOT_IN_LOBBY`); nach
   `backToLobby` darf der Host sie wieder ändern.
+- `settings.roundLimit` (Plan 014 A): `8`, `12`, `16` oder `null` (kein Limit, Standard); jeder andere Wert (`10`, `"8"`, `0`) ist `BAD_MESSAGE`. Gilt in beiden
+  Siegmodi, `docs/rules.md` Abschnitt 11.
 - `host` (Phase 6a): nur Host. `action` ist `skipTurn` (`turn` ganzzahlig ≥ 1, muss die aktuelle `game.turn` sein, sonst
   `STALE_TURN`; der Zug des aktiven Spielers endet, `docs/rules.md` 1.6) oder `removePlayer` (`playerId`, 1–64 Zeichen;
   in der Lobby wird der Sitz freigegeben, im Spiel werden die Gebiete neutral). Der Host kann sich nicht selbst entfernen
@@ -136,12 +139,15 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
     "fortifyMoves": 1,
     "missionDraft": false,
     "holdToWin": false,
+    "roundLimit": null,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
       "mapId": "testland",
       "phase": "reinforce",
       "turn": 1,
+      "round": 1,
+      "roundLimit": null,
       "activePlayerId": "6f1c…",
       "playerOrder": ["6f1c…", "9a2e…"],
       "removedPlayerIds": [],
@@ -154,6 +160,8 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
       "missionChoice": null,
       "winnerId": null,
       "winReason": null,
+      "winnerIds": [],
+      "scores": null,
       "victoryMode": "missions",
       "missions": null,
       "lastCombat": {
@@ -214,12 +222,15 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
     "fortifyMoves": 1,
     "missionDraft": false,
     "holdToWin": false,
+    "roundLimit": null,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
       "mapId": "testland",
       "phase": "reinforce",
       "turn": 5,
+      "round": 1,
+      "roundLimit": null,
       "activePlayerId": "6f1c…",
       "playerOrder": ["6f1c…", "9a2e…"],
       "removedPlayerIds": [],
@@ -235,6 +246,8 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
       "missionChoice": null,
       "winnerId": null,
       "winReason": null,
+      "winnerIds": [],
+      "scores": null,
       "victoryMode": "missions",
       "missions": null,
       "lastCombat": null,
@@ -347,12 +360,15 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
     "fortifyMoves": 1,
     "missionDraft": false,
     "holdToWin": false,
+    "roundLimit": null,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
       "mapId": "testland",
       "phase": "reinforce",
       "turn": 9,
+      "round": 1,
+      "roundLimit": null,
       "activePlayerId": "9a2e…",
       "playerOrder": ["6f1c…", "9a2e…", "4d7b…"],
       "removedPlayerIds": ["4d7b…"],
@@ -368,6 +384,8 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
       "missionChoice": null,
       "winnerId": null,
       "winReason": null,
+      "winnerIds": [],
+      "scores": null,
       "victoryMode": "missions",
       "missions": null,
       "lastCombat": null,
@@ -425,6 +443,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     "fortifyMoves": 2,
     "missionDraft": false,
     "holdToWin": false,
+    "roundLimit": null,
     "gameNo": 2,
     "publicUrl": "http://192.0.2.10:3000",
     "game": null
@@ -439,6 +458,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   Tokens, Hashes, Gründe und Zeitstempel der Aktivität stehen in keinem Snapshot.
 - Plan 011, `fortifyMoves` (öffentlich, für alle gleich, `1` oder `2`): Verschiebungen pro Zug; in der Lobby die Wahl des Hosts
   (Standard `1`), im Spiel der Wert des Spielstands (`rules.fortifyMoves`).
+- Plan 014 A, `roundLimit` (öffentlich, für alle gleich, `8` | `12` | `16` | `null`): in der Lobby die Wahl des Hosts (Standard `null`, Datenbank-Spalte
+  `rooms.round_limit`, Schema 6), im Spiel der Wert des Spielstands (`rules.roundLimit`, auch in `game.roundLimit`).
 - Plan 013, `missionDraft` und `holdToWin` (öffentlich, für alle gleich, `boolean`): die Missions-Optionen „Zwei ziehen, eine behalten“ und „Halten bis
   zum nächsten Zug“; in der Lobby die Wahl des Hosts (Standard `false`; Nachricht `settings`, nur Host, nur Lobby, Datenbank-Spalten
   `rooms.mission_draft` und `rooms.hold_to_win`, Schema 5), im Spiel der Wert des Spielstands. Nur bei `victoryMode: "missions"` wirksam.
@@ -460,6 +481,10 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     `OCCUPY_PENDING` ab.
   - `conqueredThisTurn`: in diesem Zug wurde mindestens ein Gebiet erobert.
   - `conquestsThisTurn`: Zahl der Eroberungen in diesem Zug (Plan 013; `conqueredThisTurn` ist genau dann wahr, wenn sie größer als 0 ist).
+  - `round` (Plan 014 A, ab 1): die Runde; eine Runde ist ein Umlauf der Zugfolge (`docs/rules.md` 11.1). `roundLimit`: das Limit des Raums oder `null`. Der Client zeigt
+    „Runde 5 von 12“ bzw. „Runde 5“.
+  - `winnerIds`: alle Sieger, leer bis zum Spielende; mehrere nur bei Gleichstand nach dem Rundenlimit (`winnerId` ist dann der erste in Sitzreihenfolge).
+    `scores`: nur bei `winReason: "roundLimit"` die Wertung je Spieler (`playerId`, `territories`, `continentBonus`, `points`, `armies`), sonst `null`.
   - `winnerId`: `null` oder die Spieler-ID, sobald jemand gewonnen hat (nur noch ein Spieler übrig oder im Modus
     `"missions"` die eigene Mission erfüllt; `docs/rules.md` Abschnitt 1.2).
   - `lastCombat`: `null` oder der letzte Kampf (eine `attack`- oder `blitz`-Action). `seq` zählt Kämpfe ab 1
@@ -495,7 +520,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   - `territories[id].ownerId` und `lastCombat.defenderId` sind `null` für den neutralen Besitzer (nur bei 2 Spielern).
     Neutral ist kein Spieler: nicht in `playerOrder`, nicht in `handCounts`, nicht in `players`.
   - `victoryMode` (öffentlich): `"missions"` oder `"domination"`.
-  - `winReason` (öffentlich): `null`, solange `winnerId` `null` ist, danach `"lastPlayer"` oder `"mission"`.
+  - `winReason` (öffentlich): `null`, solange `winnerId` `null` ist, danach `"lastPlayer"`, `"mission"` oder `"roundLimit"` (Plan 014 A).
   - `secret.mission` (nur eigene): `null` (in `"domination"`) oder eine Mission als Daten, `type` ist `conquerContinents`
     (`continentIds`, `extraContinents`), `holdTerritories` (`count`, `minArmies`) oder `eliminatePlayer`
     (`targetPlayerId`). Die deutschen Texte erzeugt der Client. `secret.missionReplaced` (nur eigene): die Mission ist

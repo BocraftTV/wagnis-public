@@ -293,14 +293,14 @@ describe("old Phase-4 database (fixture from the real Phase-4 server)", () => {
     expect(before.meta).toEqual([{ version: 1 }]);
   });
 
-  it("gets the column with testland for old rows, schema version 5 (phase 6a columns too), and a second open changes nothing", async () => {
+  it("gets the column with testland for old rows, schema version 6 (phase 6a columns too), and a second open changes nothing", async () => {
     const dbPath = newDb();
     seedOld(dbPath);
     await bootOld(dbPath);
     await servers.pop()!.close();
     const first = columns(dbPath);
     expect(first.cols).toContain("map_id");
-    expect(first.meta).toEqual([{ version: 5 }]);
+    expect(first.meta).toEqual([{ version: 6 }]);
     expect(first.rooms).toHaveLength(3);
     for (const r of first.rooms as { map_id: string }[]) expect(r.map_id).toBe("testland");
     // the state rows themselves were not rewritten
@@ -335,7 +335,7 @@ describe("old Phase-4 database (fixture from the real Phase-4 server)", () => {
   });
 
   it.each(["playing-3p", "playing-2p-neutral"])(
-    "%s: plays on (place, attack, end phase), version rises, the stored state is version 7 (migrated on load)",
+    "%s: plays on (place, attack, end phase), version rises, the stored state is version 8 (migrated on load)",
     async (label) => {
       const dbPath = newDb();
       seedOld(dbPath);
@@ -377,7 +377,7 @@ describe("old Phase-4 database (fixture from the real Phase-4 server)", () => {
       expect(versions).toEqual([...versions].sort((a, b) => a - b));
       expect(new Set(versions).size).toBe(versions.length);
       const state = storedState(dbPath, ids[0]!.roomId);
-      expect(state.stateVersion).toBe(7);
+      expect(state.stateVersion).toBe(8);
       expect(state.mapId).toBe("testland");
       for (const c of r.c) {
         const wire = c.raw.join("\n");

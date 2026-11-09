@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { mapIdSchema } from "./http.js";
-import { fortifyMovesSchema, roomViewSchema, victoryModeSchema } from "./view.js";
+import { fortifyMovesSchema, roomViewSchema, roundLimitSchema, victoryModeSchema } from "./view.js";
 
 export const actionSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -73,6 +73,8 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
       /** Plan 013: "two missions, keep one" and "hold until the next turn" (only effective with "missions"). */
       missionDraft: z.boolean().optional(),
       holdToWin: z.boolean().optional(),
+      /** Plan 014 A: round limit, `null` = off. */
+      roundLimit: roundLimitSchema.optional(),
     })
     .refine(
       (m) =>
@@ -80,7 +82,8 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
         m.victoryMode !== undefined ||
         m.fortifyMoves !== undefined ||
         m.missionDraft !== undefined ||
-        m.holdToWin !== undefined,
+        m.holdToWin !== undefined ||
+        m.roundLimit !== undefined,
       { message: "settings needs at least one setting" },
     ),
   /** Host only (rules.md 1.6): skip a turn, remove a player. */

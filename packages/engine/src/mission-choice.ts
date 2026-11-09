@@ -82,6 +82,7 @@ export function startFirstTurn(state: GameState, events: GameEvent[]): ActionRes
     ok: true,
     ...checkVictory(next, [
       ...events,
+      { type: "roundStarted", round: next.round },
       { type: "phaseChanged", playerId: first, phase: "reinforce" },
       { type: "turnStarted", playerId: first, turn: next.turn, reinforcements },
     ]),

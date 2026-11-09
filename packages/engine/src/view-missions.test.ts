@@ -290,6 +290,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "playerOrder",
         "reinforcementsLeft",
         "removedPlayerIds",
+        "round",
         "rules",
         "secret",
         "stateVersion",
@@ -298,6 +299,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "turn",
         "winReason",
         "winnerId",
+        "winnerIds",
       ].sort(),
     );
   });
@@ -338,6 +340,9 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "playerOrder",
         "reinforcementsLeft",
         "removedPlayerIds",
+        "round",
+        "roundLimit",
+        "scores",
         "secret",
         "territories",
         "turn",
@@ -345,6 +350,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "victoryPending",
         "winReason",
         "winnerId",
+        "winnerIds",
       ].sort(),
     );
     expect(Object.keys(v.secret).sort()).toEqual([
