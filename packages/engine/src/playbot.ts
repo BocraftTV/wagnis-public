@@ -20,6 +20,7 @@ import type {
   RuleConfig,
 } from "./index.js";
 import { pendingChoosers } from "./index.js";
+import { areAllies } from "./teams.js";
 import { eventOf, isSeaRoute } from "./world-events.js";
 
 export interface Step {
@@ -90,6 +91,7 @@ export function chooseAction(
         const toDef = map.territories.find((x) => x.id === to)!;
         if (eventOf(state, "storm") && isSeaRoute(map, from, to)) continue;
         if (eventOf(state, "truce")?.continentId === toDef.continentId) continue;
+        if (areAllies(state, state.territories[to]!.ownerId, me)) continue;
         if (state.territories[to]!.ownerId !== me) {
           pairs.push({ from, to, dice: Math.min(3, t.armies - 1) });
         }
@@ -109,7 +111,7 @@ export function chooseAction(
   if (fortify?.reach === "connected") {
     for (const group of fortify.groups) {
       for (const from of group) {
-        if (state.territories[from]!.armies > 1) {
+        if (state.territories[from]!.ownerId === me && state.territories[from]!.armies > 1) {
           options.push({ from, to: group.filter((id) => id !== from) });
         }
       }

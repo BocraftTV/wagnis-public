@@ -37,7 +37,7 @@ describe("Phase-8 states from the real server (plan 013, step 4)", () => {
   });
 
   it.each(withState.map((r) => [r.label] as const))(
-    "%s: is a version 6 state; loading migrates it to 9 without the Rng and changes nothing else",
+    "%s: is a version 6 state; loading migrates it to 10 without the Rng and changes nothing else",
     (label) => {
       const stored = raw(label);
       expect(stored["stateVersion"]).toBe(6);
@@ -65,6 +65,8 @@ describe("Phase-8 states from the real server (plan 013, step 4)", () => {
         round: _rd,
         winnerIds: _wi,
         worldEvent: _we,
+        teams: _tm,
+        winnerTeamId: _wt,
         rules,
         secret,
         ...rest
@@ -74,6 +76,7 @@ describe("Phase-8 states from the real server (plan 013, step 4)", () => {
         holdToWin: _hw,
         roundLimit: _rl,
         worldEvents: _wev,
+        teams: _tms,
         ...rulesRest
       } = rules;
       const {

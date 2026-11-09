@@ -38,13 +38,16 @@ const view = {
   mapId: "testland",
   version: 3,
   you: { playerId: "p1", isHost: true },
-  players: [{ id: "p1", name: "Jakob", seat: 0, isHost: true, connected: true, removed: false }],
+  players: [
+    { id: "p1", name: "Jakob", seat: 0, isHost: true, connected: true, removed: false, team: null },
+  ],
   victoryMode: "missions",
   fortifyMoves: 1,
   missionDraft: false,
   holdToWin: false,
   roundLimit: null,
   worldEvents: false,
+  teams: null,
   gameNo: 1,
   publicUrl: null,
   game: {
@@ -55,6 +58,9 @@ const view = {
     roundLimit: null,
     worldEvent: null,
     worldEventsLeft: 0,
+    teams: null,
+    winnerTeamId: null,
+    teamScores: null,
     activePlayerId: "p1",
     playerOrder: ["p1", "p2"],
     removedPlayerIds: [],
@@ -83,6 +89,7 @@ const view = {
       victoryPending: false,
       missionProgress: null,
       hand: [],
+      allyHands: {},
       suggestedSets: [],
       mustTrade: false,
     },
@@ -472,6 +479,17 @@ describe("phase 4 protocol: neutral owner, missions, resolution", () => {
     expect(g({ territories: fogged })).toBe(true);
   });
 
+  it("accepts a team layout and a partial team record, rejects an unknown team letter", () => {
+    const g = (extra: object) => gameViewSchema.safeParse({ ...view.game, ...extra }).success;
+    expect(g({ teams: { A: ["p1", "p2"], B: ["p3", "p4"] } })).toBe(true);
+    expect(g({ teams: { A: ["p1"], B: ["p2"], C: ["p3"] }, winnerTeamId: "C" })).toBe(true);
+    expect(g({ teams: { D: ["p1"] } })).toBe(false);
+    expect(g({ winnerTeamId: "D" })).toBe(false);
+    expect(g({ teamScores: [{ teamId: "A", playerIds: ["p1"], points: 3, armies: 5 }] })).toBe(
+      true,
+    );
+  });
+
   it("rejects bad resolution and win fields", () => {
     const g = (extra: object) => gameViewSchema.safeParse({ ...view.game, ...extra }).success;
     expect(g({ winReason: "timeout" })).toBe(false);
@@ -593,6 +611,11 @@ describe("host protocol (phase 6a)", () => {
       { type: "settings", roundLimit: 16 },
       { type: "settings", roundLimit: null },
       { type: "settings", worldEvents: true },
+      { type: "settings", teams: "2v2" },
+      { type: "settings", teams: null },
+      { type: "team", playerId: "p2", team: "B" },
+      { type: "team", playerId: "p2", team: null },
+      { type: "randomTeams" },
       { type: "settings", worldEvents: false },
       { type: "settings", mapId: "welt", victoryMode: "domination", fortifyMoves: 2 },
       { type: "settings", mapId: "testland", fortifyMoves: 1 },
@@ -617,6 +640,10 @@ describe("host protocol (phase 6a)", () => {
       { type: "settings", roundLimit: "8" },
       { type: "settings", roundLimit: 0 },
       { type: "settings", worldEvents: "yes" },
+      { type: "settings", teams: "5v5" },
+      { type: "team", playerId: "p2", team: "D" },
+      { type: "team", team: "A" },
+      { type: "randomTeams", extra: 1 },
       { type: "settings", worldEvents: null },
       { type: "settings", fortifyMoves: 3 },
       { type: "settings", fortifyMoves: "2" },

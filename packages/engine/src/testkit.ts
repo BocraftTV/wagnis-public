@@ -60,6 +60,8 @@ export function makeState(spec: StateSpec): GameState {
     winReason: null,
     winnerIds: [],
     worldEvent: null,
+    teams: null,
+    winnerTeamId: null,
     removedPlayerIds: [],
     stateVersion: STATE_VERSION,
     lastCombat: null,

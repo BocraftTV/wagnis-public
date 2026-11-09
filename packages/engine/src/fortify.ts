@@ -2,6 +2,7 @@ import { findTerritory } from "./attack.js";
 import { getMap } from "./maps/index.js";
 import type { MapDefinition } from "./map/types.js";
 import { endTurn } from "./turn.js";
+import { ownsForTeam } from "./teams.js";
 import { usableNeighbors } from "./world-events.js";
 import { checkVictory } from "./victory.js";
 import type {
@@ -33,7 +34,9 @@ export function fortifyTargets(
   playerId: PlayerId,
   fromId: TerritoryId,
 ): Set<TerritoryId> {
-  const own = (id: TerritoryId): boolean => state.territories[id]?.ownerId === playerId;
+  // Own ground, and in a team game the team mates' ground too: armies may be moved to a partner (rules.md 13).
+  const own = (id: TerritoryId): boolean =>
+    ownsForTeam(state, state.territories[id]?.ownerId ?? null, playerId);
   const reached = new Set<TerritoryId>();
   if (state.rules.fortifyReach === "adjacent") {
     for (const n of neighborsOf(map, state, fromId)) if (own(n)) reached.add(n);
@@ -63,7 +66,10 @@ export function applyFortify(
   const from = findTerritory(state, action.from);
   const to = findTerritory(state, action.to);
   if (!from || !to) return fail("UNKNOWN_TERRITORY");
-  if (from.ownerId !== playerId || to.ownerId !== playerId) return fail("NOT_OWNER");
+  // The origin is always the player's own; the target may also be a team mate's territory (rules.md 13, question 58).
+  if (from.ownerId !== playerId || !ownsForTeam(state, to.ownerId, playerId)) {
+    return fail("NOT_OWNER");
+  }
   if (action.from === action.to) return fail("SAME_TERRITORY");
   const map = getMap(state.mapId);
   if (!map) return fail("UNKNOWN_MAP");
@@ -98,13 +104,17 @@ export function applyFortify(
 /** The fortify view for the active player: groups ("connected") or targets per origin ("adjacent"). */
 export function fortifyView(map: MapDefinition, state: GameState, playerId: PlayerId): FortifyView {
   const own = map.territories.filter((t) => state.territories[t.id]?.ownerId === playerId);
+  // Own ground plus the team mates' (rules.md 13): targets and groups may contain a partner's territories.
+  const ground = map.territories.filter((t) =>
+    ownsForTeam(state, state.territories[t.id]?.ownerId ?? null, playerId),
+  );
   const moves = { movesDone: state.fortifyMovesDone, movesMax: state.rules.fortifyMoves };
   if (state.rules.fortifyReach === "adjacent") {
     const targets: Record<TerritoryId, TerritoryId[]> = {};
     for (const t of own) {
       if ((state.territories[t.id]?.armies ?? 0) < 2) continue;
       const usable = neighborsOf(map, state, t.id);
-      const to = own.filter((o) => usable.includes(o.id)).map((o) => o.id);
+      const to = ground.filter((o) => usable.includes(o.id)).map((o) => o.id);
       if (to.length > 0) targets[t.id] = to;
     }
     return { reach: "adjacent", targets, ...moves };
@@ -115,7 +125,7 @@ export function fortifyView(map: MapDefinition, state: GameState, playerId: Play
     if (done.has(t.id)) continue;
     const members = new Set([t.id, ...fortifyTargets(map, state, playerId, t.id)]);
     for (const m of members) done.add(m);
-    if (members.size >= 2) groups.push(own.filter((o) => members.has(o.id)).map((o) => o.id));
+    if (members.size >= 2) groups.push(ground.filter((o) => members.has(o.id)).map((o) => o.id));
   }
   return { reach: "connected", groups, ...moves };
 }

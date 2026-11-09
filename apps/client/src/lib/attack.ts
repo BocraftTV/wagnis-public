@@ -18,11 +18,15 @@ export function targetsFrom(
   territories: GameViewMessage["territories"],
   me: string,
   from: string | null,
+  /** Team mates (display only): their territories are no targets. The server answers ALLY_TARGET anyway. */
+  allies: readonly string[] = [],
 ): string[] {
   if (!from) return [];
   return (neighbors[from] ?? []).filter((id) => {
     const t = territories[id];
-    return t !== undefined && t.ownerId !== me;
+    return (
+      t !== undefined && t.ownerId !== me && !(t.ownerId !== null && allies.includes(t.ownerId))
+    );
   });
 }
 

@@ -6,6 +6,7 @@ import type {
   GameStateV6,
   GameStateV7,
   GameStateV8,
+  GameStateV9,
 } from "./normalize.js";
 import { STATE_VERSION } from "./state-version.js";
 import type { GameState, MigrateErrorCode, Rng } from "./types.js";
@@ -100,13 +101,27 @@ export function migrate7to8(state: GameStateV7): GameStateV8 {
  * 8 -> 9 (plan 014 B): no world events: `rules.worldEvents: false`, no event in force, an empty event deck
  * (rules.md 1.5, 12). Builds a new object; the input is not touched, no `Rng`.
  */
-export function migrate8to9(state: GameStateV8): GameState {
+export function migrate8to9(state: GameStateV8): GameStateV9 {
   return {
     ...state,
     rules: { ...state.rules, worldEvents: false },
     worldEvent: null,
     secret: { ...state.secret, eventDeck: [] },
     stateVersion: 9,
+  };
+}
+
+/**
+ * 9 -> 10 (plan 014 C): no teams: `rules.teams: null`, `teams: null`, `winnerTeamId: null` (rules.md 1.5, 13). Builds a
+ * new object; the input is not touched, no `Rng`.
+ */
+export function migrate9to10(state: GameStateV9): GameState {
+  return {
+    ...state,
+    rules: { ...state.rules, teams: null },
+    teams: null,
+    winnerTeamId: null,
+    stateVersion: 10,
   };
 }
 
@@ -121,6 +136,7 @@ const MIGRATIONS: Record<number, (state: never) => unknown> = {
   6: migrate6to7,
   7: migrate7to8,
   8: migrate8to9,
+  9: migrate9to10,
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>

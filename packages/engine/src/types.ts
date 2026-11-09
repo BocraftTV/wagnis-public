@@ -76,7 +76,13 @@ export interface RuleConfig {
   roundLimit: RoundLimit;
   /** Plan 014 B: a world event is drawn at the start of every round (rules.md 12). Lobby choice of the host. */
   worldEvents: boolean;
+  /** Plan 014 C: teams (rules.md 13). Only with the matching player count; the lobby choice of the host. */
+  teams: TeamMode;
 }
+
+/** Team layout chosen in the lobby (plan 014 C, rules.md 13); `null` is off. */
+export type TeamMode = null | "2v2" | "3v3" | "2v2v2";
+export type TeamId = "A" | "B" | "C";
 
 export type WorldEventKind =
   "storm" | "goldRush" | "plague" | "mobilize" | "truce" | "rebellion" | "cardFlood" | "fog";
@@ -150,6 +156,10 @@ export interface GameState {
   fortifyMovesDone: number;
   /** Plan 014 B: the event of the current round, or null (events off). Public. */
   worldEvent: WorldEvent | null;
+  /** Plan 014 C: the teams in seat order, or null without teams. Public. */
+  teams: Partial<Record<TeamId, PlayerId[]>> | null;
+  /** Plan 014 C: the winning team in a team game, set together with `winnerId`; otherwise null. */
+  winnerTeamId: TeamId | null;
   /** Set as soon as someone wins (rules.md 1.2). */
   winnerId: PlayerId | null;
   /** Set together with `winnerId`. */
@@ -287,14 +297,16 @@ export type ActionErrorCode =
   | "ALREADY_CHOSEN"
   | "INVALID_CHOICE"
   | "SEA_BLOCKED"
-  | "TRUCE";
+  | "TRUCE"
+  | "ALLY_TARGET";
 
 export type SetupErrorCode =
   | "INVALID_MAP"
   | "INVALID_PLAYER_COUNT"
   | "INVALID_RULES"
   | "UNSUPPORTED_PLACEMENT"
-  | "INVALID_MISSIONS";
+  | "INVALID_MISSIONS"
+  | "INVALID_TEAMS";
 
 /** Why a stored state could not be loaded (`migrateState`). */
 export type MigrateErrorCode = "STATE_VERSION_INVALID" | "STATE_VERSION_UNSUPPORTED";
@@ -424,10 +436,20 @@ export interface SecretView {
   /** Progress of the own mission; null for the other kinds. Worked out by the engine, never by the client. */
   missionProgress: MissionProgress | null;
   hand: HandCard[];
+  /** Plan 014 C: the hands of the viewer's teammates, so partners see each other's cards; empty without teams. */
+  allyHands: Record<PlayerId, Card[]>;
   /** At most one set per trade value (best first); only in the own reinforce phase, otherwise empty. */
   suggestedSets: SuggestedSet[];
   /** The mandatory trade is open: `placeArmies` and `endPhase` are locked. */
   mustTrade: boolean;
+}
+
+/** One line of the team score (rules.md 13): the sums of the members' points and armies. */
+export interface TeamScore {
+  teamId: TeamId;
+  playerIds: PlayerId[];
+  points: number;
+  armies: number;
 }
 
 /** One line of the score after the round limit (rules.md 11.2). Public once the game is over. */
@@ -453,6 +475,12 @@ export interface GameView {
   /** Plan 014 B: the event of this round, or null; and how many cards are left in the event deck. */
   worldEvent: WorldEvent | null;
   worldEventsLeft: number;
+  /** Plan 014 C: the teams, or null; public, the same for everybody. */
+  teams: Partial<Record<TeamId, PlayerId[]>> | null;
+  /** The winning team in a team game, otherwise null. */
+  winnerTeamId: TeamId | null;
+  /** Plan 014 C: the score summed per team, only with `winReason: "roundLimit"` in a team game; otherwise null. */
+  teamScores: TeamScore[] | null;
   activePlayerId: PlayerId;
   playerOrder: PlayerId[];
   /** Players the host removed, in the order of removal; public, the same for every viewer (rules.md 7). */

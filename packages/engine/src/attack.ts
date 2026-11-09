@@ -2,6 +2,7 @@ import { resolveRoll, rollDice } from "./combat.js";
 import { getMap } from "./maps/index.js";
 import { replaceTargetMissions } from "./missions.js";
 import { isEliminated } from "./players.js";
+import { areAllies, teamMembers } from "./teams.js";
 import { eventOf, isSeaRoute } from "./world-events.js";
 import { MAX_COMBAT_ROLLS } from "./types.js";
 import type {
@@ -28,6 +29,22 @@ export function findTerritory(state: GameState, id: TerritoryId): TerritoryState
   return Object.hasOwn(state.territories, id) ? state.territories[id] : undefined;
 }
 
+/**
+ * Who gets the hand of an eliminated player: the conqueror, or in a team game the next team mate in turn order who
+ * is still in (starting behind the eliminated player), falling back to the conqueror when the team is out.
+ */
+function handTaker(state: GameState, eliminatedId: PlayerId, conquerorId: PlayerId): PlayerId {
+  const mates = teamMembers(state, eliminatedId).filter((p) => p !== eliminatedId);
+  if (mates.length === 0) return conquerorId;
+  const order = state.playerOrder;
+  const start = order.indexOf(eliminatedId);
+  for (let step = 1; step <= order.length; step++) {
+    const candidate = order[(start + step) % order.length]!;
+    if (mates.includes(candidate) && !isEliminated(state, candidate)) return candidate;
+  }
+  return conquerorId;
+}
+
 /** Highest number of dice the attacker may use from a territory with `armies` armies. */
 export const maxDiceFor = (armies: number): number => Math.max(0, Math.min(3, armies - 1));
 
@@ -47,6 +64,7 @@ function checkTarget(
   if (!from || !to) return "UNKNOWN_TERRITORY";
   if (from.ownerId !== playerId) return "NOT_OWNER";
   if (to.ownerId === playerId) return "OWN_TARGET";
+  if (areAllies(state, to.ownerId, playerId)) return "ALLY_TARGET";
   const map = getMap(state.mapId);
   if (!map) return "UNKNOWN_MAP";
   if (!map.territories.find((t) => t.id === fromId)?.neighbors.includes(toId)) {
@@ -152,6 +170,9 @@ function fight(
       events.push({ type: "playerEliminated", playerId: defenderId, byPlayerId: playerId });
       // The conqueror takes the whole hand. No instant trade (rules.md 6): the mandatory trade applies
       // in the conqueror's next reinforce phase. This also happens when the elimination ends the game.
+      // In a team game the hand goes to the next team mate still in the game, in turn order, instead (rules.md 13,
+      // question 59); if the whole team is out, the conqueror takes it as usual.
+      const taker = handTaker(next, defenderId, playerId);
       const taken = next.secret.hand[defenderId] ?? [];
       if (taken.length > 0) {
         next = {
@@ -160,14 +181,14 @@ function fight(
             ...next.secret,
             hand: {
               ...next.secret.hand,
-              [playerId]: [...(next.secret.hand[playerId] ?? []), ...taken],
+              [taker]: [...(next.secret.hand[taker] ?? []), ...taken],
               [defenderId]: [],
             },
           },
         };
         events.push({
           type: "cardsTaken",
-          playerId,
+          playerId: taker,
           fromPlayerId: defenderId,
           count: taken.length,
         });

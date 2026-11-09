@@ -3,13 +3,15 @@
   import { kindName } from "../lib/cards.js";
   import CardSymbol from "./CardSymbol.svelte";
 
-  type Card = GameViewMessage["secret"]["hand"][number];
+  // The own hand (with `bonusEligible`) and a partner's hand (plain cards) both fit.
+  type Card = Pick<GameViewMessage["secret"]["hand"][number], "id" | "kind" | "territoryId">;
 
   let {
     hand,
     territoryName,
     selected = [],
     onpick,
+    label = "Deine Karten",
   }: {
     hand: Card[];
     territoryName: (id: string) => string;
@@ -17,10 +19,12 @@
     selected?: string[];
     /** When set, cards are tappable (trade dialog); otherwise they are display only. */
     onpick?: (id: string) => void;
+    /** Accessible name of the list. */
+    label?: string;
   } = $props();
 </script>
 
-<ul class="hand" aria-label="Deine Karten">
+<ul class="hand" aria-label={label}>
   {#each hand as card (card.id)}
     <li>
       {#if onpick}

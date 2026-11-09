@@ -67,6 +67,9 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
 { "type": "settings", "fortifyMoves": 2 }
 { "type": "settings", "roundLimit": 12 }
 { "type": "settings", "worldEvents": true }
+{ "type": "settings", "teams": "2v2" }
+{ "type": "team", "playerId": "9a2e…", "team": "B" }
+{ "type": "randomTeams" }
 { "type": "settings", "missionDraft": true, "holdToWin": true }
 { "type": "host", "reqId": "h1", "action": { "type": "skipTurn", "turn": 12 } }
 { "type": "host", "reqId": "h2", "action": { "type": "removePlayer", "playerId": "9a2e…" } }
@@ -93,6 +96,9 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
 - `settings.roundLimit` (Plan 014 A): `8`, `12`, `16` oder `null` (kein Limit, Standard); jeder andere Wert (`10`, `"8"`, `0`) ist `BAD_MESSAGE`. Gilt in beiden
   Siegmodi, `docs/rules.md` Abschnitt 11.
 - `settings.worldEvents` (Plan 014 B): `boolean`, Standard `false`; Weltereignisse (`docs/rules.md` Abschnitt 12). Andere Typen sind `BAD_MESSAGE`.
+- `settings.teams` (Plan 014 C): `"2v2"` (4 Spieler), `"3v3"` oder `"2v2v2"` (6 Spieler), `null` = aus (Standard). Eine Änderung löscht die Zuteilung. `team { playerId, team }` (`"A"`, `"B"`, `"C"` oder `null`): nur Host,
+  nur Lobby (`NOT_IN_LOBBY`); ohne Layout oder mit einem Team, das es im Layout nicht gibt, `INVALID_TEAMS`; unbekannter Spieler `UNKNOWN_PLAYER`. `randomTeams`: nur Host, nur Lobby; verteilt alle Spieler zufällig in
+  den Größen des Layouts, bei falscher Spielerzahl `INVALID_TEAMS`. `start` ohne vollständige, passende Zuteilung ist `INVALID_TEAMS`. `docs/rules.md` Abschnitt 13.
 - `host` (Phase 6a): nur Host. `action` ist `skipTurn` (`turn` ganzzahlig ≥ 1, muss die aktuelle `game.turn` sein, sonst
   `STALE_TURN`; der Zug des aktiven Spielers endet, `docs/rules.md` 1.6) oder `removePlayer` (`playerId`, 1–64 Zeichen;
   in der Lobby wird der Sitz freigegeben, im Spiel werden die Gebiete neutral). Der Host kann sich nicht selbst entfernen
@@ -134,8 +140,8 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
     "version": 3,
     "you": { "playerId": "6f1c…", "isHost": true },
     "players": [
-      { "id": "6f1c…", "name": "Anna", "seat": 0, "isHost": true, "connected": true, "removed": false },
-      { "id": "9a2e…", "name": "Ben", "seat": 1, "isHost": false, "connected": false, "removed": false }
+      { "id": "6f1c…", "name": "Anna", "seat": 0, "isHost": true, "connected": true, "removed": false, "team": null },
+      { "id": "9a2e…", "name": "Ben", "seat": 1, "isHost": false, "connected": false, "removed": false, "team": null }
     ],
     "victoryMode": "missions",
     "fortifyMoves": 1,
@@ -143,6 +149,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
     "holdToWin": false,
     "roundLimit": null,
     "worldEvents": false,
+    "teams": null,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -153,6 +160,9 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
       "roundLimit": null,
       "worldEvent": null,
       "worldEventsLeft": 0,
+      "teams": null,
+      "winnerTeamId": null,
+      "teamScores": null,
       "activePlayerId": "6f1c…",
       "playerOrder": ["6f1c…", "9a2e…"],
       "removedPlayerIds": [],
@@ -184,7 +194,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
       "deckCount": 8,
       "discardCount": 0,
       "fortify": null,
-      "secret": { "mission": null, "missionReplaced": false, "missionOffer": null, "victoryPending": false, "missionProgress": null, "hand": [], "suggestedSets": [], "mustTrade": false },
+      "secret": { "mission": null, "missionReplaced": false, "missionOffer": null, "victoryPending": false, "missionProgress": null, "hand": [], "allyHands": {}, "suggestedSets": [], "mustTrade": false },
       "handCounts": { "6f1c…": 0, "9a2e…": 0 }
     }
   }
@@ -212,7 +222,8 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
         "seat": 0,
         "isHost": true,
         "connected": true,
-        "removed": false
+        "removed": false,
+        "team": null
       },
       {
         "id": "9a2e…",
@@ -220,7 +231,8 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
         "seat": 1,
         "isHost": false,
         "connected": true,
-        "removed": false
+        "removed": false,
+        "team": null
       }
     ],
     "victoryMode": "missions",
@@ -229,6 +241,7 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
     "holdToWin": false,
     "roundLimit": null,
     "worldEvents": false,
+    "teams": null,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -239,6 +252,9 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
       "roundLimit": null,
       "worldEvent": null,
       "worldEventsLeft": 0,
+      "teams": null,
+      "winnerTeamId": null,
+      "teamScores": null,
       "activePlayerId": "6f1c…",
       "playerOrder": ["6f1c…", "9a2e…"],
       "removedPlayerIds": [],
@@ -306,6 +322,7 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
           },
           { "id": "card-joker-1", "kind": "joker", "territoryId": null, "bonusEligible": false }
         ],
+        "allyHands": {},
         "suggestedSets": [
           {
             "cardIds": ["card-eisenfurt", "card-grauwacht", "card-joker-1"],
@@ -345,7 +362,8 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
         "seat": 0,
         "isHost": true,
         "connected": true,
-        "removed": false
+        "removed": false,
+        "team": null
       },
       {
         "id": "9a2e…",
@@ -353,7 +371,8 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
         "seat": 1,
         "isHost": false,
         "connected": true,
-        "removed": false
+        "removed": false,
+        "team": null
       },
       {
         "id": "4d7b…",
@@ -361,7 +380,8 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
         "seat": 2,
         "isHost": false,
         "connected": false,
-        "removed": true
+        "removed": true,
+        "team": null
       }
     ],
     "victoryMode": "missions",
@@ -370,6 +390,7 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
     "holdToWin": false,
     "roundLimit": null,
     "worldEvents": false,
+    "teams": null,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -380,6 +401,9 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
       "roundLimit": null,
       "worldEvent": null,
       "worldEventsLeft": 0,
+      "teams": null,
+      "winnerTeamId": null,
+      "teamScores": null,
       "activePlayerId": "9a2e…",
       "playerOrder": ["6f1c…", "9a2e…", "4d7b…"],
       "removedPlayerIds": ["4d7b…"],
@@ -411,6 +435,7 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
         "victoryPending": false,
         "missionProgress": null,
         "hand": [],
+        "allyHands": {},
         "suggestedSets": [],
         "mustTrade": false
       },
@@ -439,7 +464,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
         "seat": 0,
         "isHost": true,
         "connected": true,
-        "removed": false
+        "removed": false,
+        "team": null
       },
       {
         "id": "9a2e…",
@@ -447,7 +473,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
         "seat": 1,
         "isHost": false,
         "connected": true,
-        "removed": false
+        "removed": false,
+        "team": null
       }
     ],
     "victoryMode": "domination",
@@ -456,6 +483,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     "holdToWin": false,
     "roundLimit": null,
     "worldEvents": false,
+    "teams": null,
     "gameNo": 2,
     "publicUrl": "http://192.0.2.10:3000",
     "game": null
@@ -472,6 +500,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   (Standard `1`), im Spiel der Wert des Spielstands (`rules.fortifyMoves`).
 - Plan 014 A, `roundLimit` (öffentlich, für alle gleich, `8` | `12` | `16` | `null`): in der Lobby die Wahl des Hosts (Standard `null`, Datenbank-Spalte
   `rooms.round_limit`, Schema 6), im Spiel der Wert des Spielstands (`rules.roundLimit`, auch in `game.roundLimit`).
+- Plan 014 C, `teams` (öffentlich, für alle gleich, `"2v2"` | `"3v3"` | `"2v2v2"` | `null`): in der Lobby die Wahl des Hosts, im Spiel der Wert des Spielstands. `players[].team`: das Team (`"A"`, `"B"`,
+  `"C"` oder `null`), in der Lobby die Zuteilung des Hosts (Datenbank `rooms.teams` und `players.team`, Schema 8), im Spiel aus dem Spielstand.
 - Plan 014 B, `worldEvents` (öffentlich, für alle gleich, `boolean`): in der Lobby die Wahl des Hosts (Standard `false`, Datenbank-Spalte `rooms.world_events`, Schema 7),
   im Spiel der Wert des Spielstands (`rules.worldEvents`).
 - Plan 013, `missionDraft` und `holdToWin` (öffentlich, für alle gleich, `boolean`): die Missions-Optionen „Zwei ziehen, eine behalten“ und „Halten bis
@@ -501,6 +531,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     `rebellion`, `cardFlood`, `fog`; `continentId` bei `goldRush`, `plague`, `truce`, sonst `null`; `playerIds` und `territoryIds` nur bei `rebellion`, sonst leer). `worldEventsLeft`:
     Zahl der Karten im geheimen Stapel (nie sein Inhalt).
   - Während `fog` stehen `armies`, `maxAttackDice` und `maxMove` fremder und neutraler Gebiete auf `null` (der Client zeigt „?“), und `pendingOccupation` eines anderen Spielers ist `null`.
+  - `teams` (Plan 014 C): `null` oder `{ "A": [Spieler-IDs], "B": [...], "C": [...] }` mit den Teams des Layouts (öffentlich). `winnerTeamId`: nach einem Teamspiel das Siegerteam. `teamScores`: nur bei
+    `winReason: "roundLimit"` im Teamspiel die Summen je Team (`teamId`, `playerIds`, `points`, `armies`). `secret.allyHands`: die Handkarten der Teampartner (nur im eigenen View, `{}` ohne Teams).
   - `winnerIds`: alle Sieger, leer bis zum Spielende; mehrere nur bei Gleichstand nach dem Rundenlimit (`winnerId` ist dann der erste in Sitzreihenfolge).
     `scores`: nur bei `winReason: "roundLimit"` die Wertung je Spieler (`playerId`, `territories`, `continentBonus`, `points`, `armies`), sonst `null`.
   - `winnerId`: `null` oder die Spieler-ID, sobald jemand gewonnen hat (nur noch ein Spieler übrig oder im Modus
@@ -606,6 +638,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
       "victoryPending": false,
       "missionProgress": null,
       "hand": [],
+      "allyHands": {},
       "suggestedSets": [],
       "mustTrade": false
     }
@@ -624,6 +657,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
       "victoryPending": false,
       "missionProgress": null,
       "hand": [],
+      "allyHands": {},
       "suggestedSets": [],
       "mustTrade": false
     }
@@ -642,6 +676,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
       "victoryPending": false,
       "missionProgress": null,
       "hand": [],
+      "allyHands": {},
       "suggestedSets": [],
       "mustTrade": false
     }
@@ -660,6 +695,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
       "victoryPending": false,
       "missionProgress": null,
       "hand": [],
+      "allyHands": {},
       "suggestedSets": [],
       "mustTrade": false
     }
@@ -732,7 +768,7 @@ Fall daran, es gibt kein zusätzliches Feld):
 - Fehler gehen nur an den Absender, es wird nichts gespeichert. Codes: `BAD_MESSAGE`, `NOT_AUTHENTICATED`,
   `RATE_LIMITED`, `NOT_HOST`, `NOT_IN_LOBBY`, `NOT_IN_GAME`, `NOT_ENOUGH_PLAYERS`, `START_FAILED`,
   `INTERNAL`, `STATE_UNSUPPORTED`, `NOT_FINISHED`, `CANNOT_REMOVE_SELF`, `ALREADY_HOST`, `NOT_PRESENT` sowie die Engine-Fehler `NOT_YOUR_TURN`, `WRONG_PHASE`, `UNKNOWN_TERRITORY`, `NOT_OWNER`,
-  `INVALID_COUNT`, `SEA_BLOCKED` (Sturm), `TRUCE` (Waffenstillstand), `NOT_ENOUGH_REINFORCEMENTS`, `REINFORCEMENTS_REMAINING`, `UNKNOWN_ACTION`, `UNKNOWN_MAP`
+  `INVALID_COUNT`, `ALLY_TARGET` (Angriff auf einen Partner), `INVALID_TEAMS` (Teamzuteilung passt nicht), `SEA_BLOCKED` (Sturm), `TRUCE` (Waffenstillstand), `NOT_ENOUGH_REINFORCEMENTS`, `REINFORCEMENTS_REMAINING`, `UNKNOWN_ACTION`, `UNKNOWN_MAP`
   sowie die Angriffsfehler `INVALID_DICE`, `NOT_ADJACENT`, `OWN_TARGET`, `NOT_ENOUGH_ARMIES`, `OCCUPY_PENDING`,
   `NO_OCCUPY_PENDING`, `INVALID_OCCUPY_COUNT`, `GAME_OVER` sowie die Fehler für Verschieben und Karten
   `SAME_TERRITORY`, `NOT_CONNECTED`, `MUST_TRADE`, `INVALID_SET`, `UNKNOWN_CARD`, `INVALID_BONUS_TERRITORY` sowie die Host-Fehler `STALE_TURN`, `UNKNOWN_PLAYER`, `PLAYER_REMOVED` (Bedeutung: `docs/rules.md` Abschnitt 8;

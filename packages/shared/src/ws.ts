@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { mapIdSchema } from "./http.js";
-import { fortifyMovesSchema, roomViewSchema, roundLimitSchema, victoryModeSchema } from "./view.js";
+import {
+  fortifyMovesSchema,
+  roomViewSchema,
+  roundLimitSchema,
+  teamIdSchema,
+  teamModeSchema,
+  victoryModeSchema,
+} from "./view.js";
 
 export const actionSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -77,6 +84,8 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
       roundLimit: roundLimitSchema.optional(),
       /** Plan 014 B: a world event at the start of every round. */
       worldEvents: z.boolean().optional(),
+      /** Plan 014 C: team layout, `null` = off. Changing it clears the assignment. */
+      teams: teamModeSchema.optional(),
     })
     .refine(
       (m) =>
@@ -86,9 +95,18 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
         m.missionDraft !== undefined ||
         m.holdToWin !== undefined ||
         m.roundLimit !== undefined ||
-        m.worldEvents !== undefined,
+        m.worldEvents !== undefined ||
+        m.teams !== undefined,
       { message: "settings needs at least one setting" },
     ),
+  /** Host only, lobby only (plan 014 C): put a player into a team, or `null` to take them out. */
+  z.strictObject({
+    type: z.literal("team"),
+    playerId: z.string().min(1).max(64),
+    team: teamIdSchema.nullable(),
+  }),
+  /** Host only, lobby only (plan 014 C): assign everybody to teams at random. */
+  z.strictObject({ type: z.literal("randomTeams") }),
   /** Host only (rules.md 1.6): skip a turn, remove a player. */
   z.strictObject({
     type: z.literal("host"),
@@ -160,6 +178,8 @@ export const wsErrorCodeSchema = z.enum([
   "INVALID_CHOICE",
   "SEA_BLOCKED",
   "TRUCE",
+  "ALLY_TARGET",
+  "INVALID_TEAMS",
 ]);
 export type WsErrorCode = z.infer<typeof wsErrorCodeSchema>;
 

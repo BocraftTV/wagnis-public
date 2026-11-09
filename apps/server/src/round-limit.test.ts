@@ -129,7 +129,7 @@ describe("lobby option roundLimit", () => {
   });
 });
 
-describe("schema version 7", () => {
+describe("schema version 8", () => {
   it("has the nullable round_limit column", async () => {
     const t = await table(2);
     const db = new Database(dbPath, { readonly: true });
@@ -138,7 +138,7 @@ describe("schema version 7", () => {
       notnull: number;
     }[];
     expect(cols.find((c) => c.name === "round_limit")).toMatchObject({ notnull: 0 });
-    expect(db.prepare("SELECT version FROM schema_meta").all()).toEqual([{ version: 7 }]);
+    expect(db.prepare("SELECT version FROM schema_meta").all()).toEqual([{ version: 8 }]);
     db.close();
     expect(t.roomId).toBeTruthy();
   });

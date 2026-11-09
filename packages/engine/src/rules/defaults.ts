@@ -8,6 +8,8 @@ export const defaultMissionDraft = false;
 export const defaultHoldToWin = false;
 /** No round limit (plan 014 A, rules.md 11). */
 export const defaultWorldEvents = false;
+/** No teams (plan 014 C, rules.md 13). */
+export const defaultTeams: RuleConfig["teams"] = null;
 export const defaultRoundLimit: RuleConfig["roundLimit"] = null;
 
 export const defaultCardRules: CardRules = {

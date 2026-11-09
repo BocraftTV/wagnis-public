@@ -27,6 +27,7 @@ const row = (id: string, o: Partial<Row> = {}): Row => ({
   isHost: false,
   connected: true,
   removed: false,
+  team: null,
   ...o,
 });
 
@@ -71,6 +72,7 @@ function view(o: {
     holdToWin: false,
     roundLimit: null,
     worldEvents: false,
+    teams: null,
     gameNo: 1,
     publicUrl: null,
     game,

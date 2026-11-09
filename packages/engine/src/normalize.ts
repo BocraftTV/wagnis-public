@@ -23,6 +23,7 @@ type LegacyRules = Omit<
   | "holdToWin"
   | "roundLimit"
   | "worldEvents"
+  | "teams"
 > & {
   fortifyReach?: RuleConfig["fortifyReach"];
   cards?: Partial<Omit<CardRules, "tradeValues">> & {
@@ -47,10 +48,18 @@ export type GameStateV3 = Omit<
   | "round"
   | "winnerIds"
   | "worldEvent"
+  | "teams"
+  | "winnerTeamId"
 > & {
   rules: Omit<
     RuleConfig,
-    "victoryMode" | "fortifyMoves" | "missionDraft" | "holdToWin" | "roundLimit" | "worldEvents"
+    | "victoryMode"
+    | "fortifyMoves"
+    | "missionDraft"
+    | "holdToWin"
+    | "roundLimit"
+    | "worldEvents"
+    | "teams"
   >;
   secret: Omit<
     SecretState,
@@ -67,9 +76,15 @@ export type GameStateV3 = Omit<
   };
 };
 
+/** The state format of plan 014 B (version 9): everything of version 10 except `rules.teams`, `teams` and `winnerTeamId` (plan 014 C). */
+export type GameStateV9 = Omit<GameState, "teams" | "winnerTeamId" | "rules" | "stateVersion"> & {
+  rules: Omit<RuleConfig, "teams">;
+  stateVersion: 9;
+};
+
 /** The state format of plan 014 A (version 8): everything of version 9 except `rules.worldEvents`, `worldEvent` and `secret.eventDeck` (plan 014 B). */
-export type GameStateV8 = Omit<GameState, "worldEvent" | "rules" | "secret" | "stateVersion"> & {
-  rules: Omit<RuleConfig, "worldEvents">;
+export type GameStateV8 = Omit<GameStateV9, "worldEvent" | "rules" | "secret" | "stateVersion"> & {
+  rules: Omit<GameStateV9["rules"], "worldEvents">;
   secret: Omit<SecretState, "eventDeck">;
   stateVersion: 8;
 };

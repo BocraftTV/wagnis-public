@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
 import { defaultFortifyMoves } from "@wagnis/engine";
-import type { GameState, RoundLimit } from "@wagnis/engine";
+import type { GameState, RoundLimit, TeamId, TeamMode } from "@wagnis/engine";
 import { MAX_PLAYERS } from "@wagnis/shared";
 import type { MapId, RoomStatus } from "@wagnis/shared";
 
@@ -24,6 +24,8 @@ export interface RoomRow {
   roundLimit: RoundLimit;
   /** World events chosen in the lobby (plan 014 B); a running game uses the value in its state. */
   worldEvents: boolean;
+  /** Team layout chosen in the lobby (plan 014 C), `null` = off; a running game uses the value in its state. */
+  teams: TeamMode;
   /** Number of the game in this room, from 1; rises with every "back to the lobby". */
   gameNo: number;
   stateJson: string | null;
@@ -43,6 +45,8 @@ export interface PlayerRow {
   isHost: boolean;
   /** Marked as removed by the host (running game only; the token hash is then empty). */
   removed: boolean;
+  /** The host's team assignment in the lobby (plan 014 C); `null` = none. */
+  team: TeamId | null;
 }
 
 export type AddPlayerResult =
@@ -65,7 +69,8 @@ CREATE TABLE IF NOT EXISTS rooms (
   mission_draft INTEGER NOT NULL DEFAULT 0,
   hold_to_win INTEGER NOT NULL DEFAULT 0,
   round_limit INTEGER,
-  world_events INTEGER NOT NULL DEFAULT 0
+  world_events INTEGER NOT NULL DEFAULT 0,
+  teams TEXT
 );
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
@@ -75,13 +80,14 @@ CREATE TABLE IF NOT EXISTS players (
   seat INTEGER NOT NULL,
   is_host INTEGER NOT NULL DEFAULT 0,
   removed INTEGER NOT NULL DEFAULT 0,
+  team TEXT,
   UNIQUE (room_id, seat)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS players_room_name ON players (room_id, lower(name));
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
 `;
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 export class Store {
   private readonly db: Database.Database;
@@ -103,7 +109,7 @@ export class Store {
    * `players.removed` (0). All in one transaction; rows are not rewritten otherwise, and opening an up-to-date
    * database changes nothing. Version 4 (plan 011) adds `rooms.fortify_moves` (old rows: 1, the one fortify move per
    * turn every room had until then). Version 5 (plan 013) adds `rooms.mission_draft` and `rooms.hold_to_win` (old rows: 0,
-   * both options off). Version 6 (plan 014 A) adds `rooms.round_limit` (old rows: NULL, no limit). Version 7 (plan 014 B) adds `rooms.world_events` (old rows: 0, events off).
+   * both options off). Version 6 (plan 014 A) adds `rooms.round_limit` (old rows: NULL, no limit). Version 7 (plan 014 B) adds `rooms.world_events` (old rows: 0, events off). Version 8 (plan 014 C) adds `rooms.teams` and `players.team` (old rows: NULL, no teams).
    */
   private upgrade(): void {
     const has = (table: string, column: string): boolean =>
@@ -137,6 +143,12 @@ export class Store {
     }
     if (!has("rooms", "world_events")) {
       this.db.exec("ALTER TABLE rooms ADD COLUMN world_events INTEGER NOT NULL DEFAULT 0");
+    }
+    if (!has("rooms", "teams")) {
+      this.db.exec("ALTER TABLE rooms ADD COLUMN teams TEXT");
+    }
+    if (!has("players", "team")) {
+      this.db.exec("ALTER TABLE players ADD COLUMN team TEXT");
     }
     if (!has("players", "removed")) {
       this.db.exec("ALTER TABLE players ADD COLUMN removed INTEGER NOT NULL DEFAULT 0");
@@ -172,6 +184,7 @@ export class Store {
       holdToWin: r["hold_to_win"] === 1,
       roundLimit: (r["round_limit"] as RoundLimit | null | undefined) ?? null,
       worldEvents: r["world_events"] === 1,
+      teams: (r["teams"] as TeamMode | null | undefined) ?? null,
       gameNo: r["game_no"] as number,
       stateJson: r["state_json"] as string | null,
       version: r["version"] as number,
@@ -193,13 +206,14 @@ export class Store {
       seat: r["seat"] as number,
       isHost: r["is_host"] === 1,
       removed: r["removed"] === 1,
+      team: (r["team"] as TeamId | null | undefined) ?? null,
     }));
   }
 
   createRoom(
     roomId: string,
     mapId: MapId,
-    host: Omit<PlayerRow, "roomId" | "seat" | "isHost" | "removed">,
+    host: Omit<PlayerRow, "roomId" | "seat" | "isHost" | "removed" | "team">,
     now: number,
   ): void {
     this.db.transaction(() => {
@@ -219,7 +233,7 @@ export class Store {
   /** Adds a non-host player to a lobby and bumps the room version, atomically. */
   addPlayer(
     roomId: string,
-    player: Omit<PlayerRow, "roomId" | "seat" | "isHost" | "removed">,
+    player: Omit<PlayerRow, "roomId" | "seat" | "isHost" | "removed" | "team">,
     now: number,
   ): AddPlayerResult {
     return this.db.transaction((): AddPlayerResult => {
@@ -337,6 +351,7 @@ export class Store {
       holdToWin?: boolean | undefined;
       roundLimit?: RoundLimit | undefined;
       worldEvents?: boolean | undefined;
+      teams?: TeamMode | undefined;
     },
     now: number,
   ): boolean {
@@ -364,10 +379,51 @@ export class Store {
         this.db
           .prepare("UPDATE rooms SET round_limit = ? WHERE id = ?")
           .run(patch.roundLimit, roomId);
+      if (patch.teams !== undefined) {
+        // A new layout starts without an assignment (the old one would not fit).
+        this.db.prepare("UPDATE rooms SET teams = ? WHERE id = ?").run(patch.teams, roomId);
+        this.db.prepare("UPDATE players SET team = NULL WHERE room_id = ?").run(roomId);
+      }
       if (patch.worldEvents !== undefined)
         this.db
           .prepare("UPDATE rooms SET world_events = ? WHERE id = ?")
           .run(patch.worldEvents ? 1 : 0, roomId);
+      this.db
+        .prepare(
+          "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
+        )
+        .run(now, now, roomId);
+      return true;
+    })();
+  }
+
+  /** Lobby only (plan 014 C): sets or clears one player's team. False if not in the lobby or the player is unknown. */
+  setPlayerTeam(roomId: string, playerId: string, team: TeamId | null, now: number): boolean {
+    return this.db.transaction((): boolean => {
+      if (this.getRoom(roomId)?.status !== "lobby") return false;
+      const done = this.db
+        .prepare("UPDATE players SET team = ? WHERE id = ? AND room_id = ?")
+        .run(team, playerId, roomId);
+      if (done.changes === 0) return false;
+      this.db
+        .prepare(
+          "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
+        )
+        .run(now, now, roomId);
+      return true;
+    })();
+  }
+
+  /** Lobby only (plan 014 C): sets the teams of several players at once (the random assignment). */
+  setTeams(roomId: string, assignment: Record<string, TeamId>, now: number): boolean {
+    return this.db.transaction((): boolean => {
+      if (this.getRoom(roomId)?.status !== "lobby") return false;
+      this.db.prepare("UPDATE players SET team = NULL WHERE room_id = ?").run(roomId);
+      for (const [playerId, team] of Object.entries(assignment)) {
+        this.db
+          .prepare("UPDATE players SET team = ? WHERE id = ? AND room_id = ?")
+          .run(team, playerId, roomId);
+      }
       this.db
         .prepare(
           "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",

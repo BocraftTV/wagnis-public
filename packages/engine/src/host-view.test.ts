@@ -56,6 +56,7 @@ describe("viewFor with removed players", () => {
       mission: null,
       missionReplaced: false,
       hand: [],
+      allyHands: {},
       suggestedSets: [],
       mustTrade: false,
       missionOffer: null,

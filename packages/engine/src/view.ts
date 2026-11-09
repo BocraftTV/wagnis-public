@@ -4,7 +4,8 @@ import { getMap } from "./maps/index.js";
 import { largestRealm } from "./missions.js";
 import { isEliminated } from "./players.js";
 import { pendingChoosers } from "./mission-choice.js";
-import { scoreboard } from "./scoring.js";
+import { scoreboard, teamScoreboard } from "./scoring.js";
+import { areAllies, teamMembers } from "./teams.js";
 import type {
   Card,
   CombatRecord,
@@ -130,6 +131,7 @@ function secretFor(state: GameState, playerId: PlayerId): SecretView {
       victoryPending: false,
       missionProgress: null,
       hand: [],
+      allyHands: {},
       suggestedSets: [],
       mustTrade: false,
     };
@@ -154,6 +156,18 @@ function secretFor(state: GameState, playerId: PlayerId): SecretView {
       const bonusEligible = shown !== null && state.territories[shown]?.ownerId === playerId;
       return [{ ...copyCard(card), bonusEligible }];
     }),
+    // Partners see each other's cards (rules.md 13); the pile and the discard pile stay hidden.
+    allyHands: Object.fromEntries(
+      teamMembers(state, playerId)
+        .filter((p) => p !== playerId && !state.removedPlayerIds.includes(p))
+        .map((p) => [
+          p,
+          (state.secret.hand[p] ?? []).flatMap((id): Card[] => {
+            const card = catalog.get(id);
+            return card ? [copyCard(card)] : [];
+          }),
+        ]),
+    ),
     suggestedSets: inReinforce
       ? findSuggestedSets(state, playerId, catalog).map((o) => ({
           cardIds: [...o.cardIds],
@@ -172,7 +186,8 @@ export function viewFor(state: GameState, playerId: PlayerId): GameView {
   // Fog (plan 014 B, rules.md 12): armies of foreign and neutral territories are secret fields for the round, and so is
   // everything derived from them. The open move-in of another player shows `max` (the armies behind it), so it goes too.
   const fog = state.worldEvent?.kind === "fog";
-  const hidden = (ownerId: string | null): boolean => fog && ownerId !== playerId;
+  const hidden = (ownerId: string | null): boolean =>
+    fog && ownerId !== playerId && !areAllies(state, ownerId, playerId);
   return {
     mapId: state.mapId,
     phase: state.phase,
@@ -188,6 +203,16 @@ export function viewFor(state: GameState, playerId: PlayerId): GameView {
         }
       : null,
     worldEventsLeft: state.secret.eventDeck.length,
+    teams: state.teams
+      ? (Object.fromEntries(
+          Object.entries(state.teams).map(([id, ps]) => [id, [...ps]]),
+        ) as NonNullable<GameState["teams"]>)
+      : null,
+    winnerTeamId: state.winnerTeamId,
+    teamScores:
+      state.teams && state.winReason === "roundLimit"
+        ? teamScoreboard(state).map((t) => ({ ...t, playerIds: [...t.playerIds] }))
+        : null,
     activePlayerId: state.activePlayerId,
     playerOrder: [...state.playerOrder],
     removedPlayerIds: [...state.removedPlayerIds],
@@ -206,7 +231,12 @@ export function viewFor(state: GameState, playerId: PlayerId): GameView {
       ]),
     ),
     pendingOccupation:
-      pending && !(fog && playerId !== state.activePlayerId)
+      pending &&
+      !(
+        fog &&
+        playerId !== state.activePlayerId &&
+        !areAllies(state, playerId, state.activePlayerId)
+      )
         ? {
             from: pending.from,
             to: pending.to,

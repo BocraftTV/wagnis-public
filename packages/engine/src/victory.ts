@@ -1,7 +1,8 @@
 import { getMap } from "./maps/index.js";
 import { missionSatisfied } from "./missions.js";
 import { isEliminated } from "./players.js";
-import { scoreboard, scoreWinners } from "./scoring.js";
+import { scoreboard, scoreWinners, teamScoreboard } from "./scoring.js";
+import { teamMembers, teamOf } from "./teams.js";
 import type { GameEvent, GameState, Mission, PlayerId, WinReason } from "./types.js";
 
 /**
@@ -16,7 +17,9 @@ export function checkLastPlayer(
 ): { state: GameState; events: GameEvent[] } {
   if (state.winnerId !== null) return { state, events };
   const alive = state.playerOrder.filter((p) => !isEliminated(state, p));
-  if (alive.length !== 1) return { state, events };
+  // In a team game one team left is enough (rules.md 13); without teams exactly one player.
+  const teamsLeft = new Set(alive.map((p) => teamOf(state, p) ?? p));
+  if (teamsLeft.size !== 1) return { state, events };
   return declareWinner(state, events, alive[0]!, "lastPlayer");
 }
 
@@ -26,15 +29,26 @@ function declareWinner(
   winnerId: PlayerId,
   reason: WinReason,
 ): { state: GameState; events: GameEvent[] } {
+  // A team game is won by the whole team: every member who has not been removed is a winner (rules.md 13).
+  const members = teamMembers(state, winnerId).filter((p) => !state.removedPlayerIds.includes(p));
+  const winnerIds = members.length > 0 ? members : [winnerId];
   return {
     state: {
       ...state,
       winnerId,
-      winnerIds: [winnerId],
+      winnerIds,
+      winnerTeamId: teamOf(state, winnerId),
       winReason: reason,
       pendingOccupation: null,
     },
-    events: [...events, { type: "gameWon", playerId: winnerId, reason }],
+    events: [
+      ...events,
+      ...(state.teams ? winnerIds : [winnerId]).map((playerId): GameEvent => ({
+        type: "gameWon",
+        playerId,
+        reason,
+      })),
+    ],
   };
 }
 
@@ -152,23 +166,35 @@ export function finishByRoundLimit(
         return declareWinner(state, events, p, "mission");
     }
   }
-  const winners = scoreWinners(scoreboard(state));
-  const first = winners[0] ?? state.activePlayerId;
+  // Team game: the sums of the teams count, and every member of a winning team wins (rules.md 11.2, 13).
+  const winners = state.teams
+    ? scoreWinners(
+        teamScoreboard(state).map((t) => ({
+          playerId: t.teamId,
+          points: t.points,
+          armies: t.armies,
+        })),
+      )
+    : scoreWinners(scoreboard(state));
+  const members = state.teams
+    ? state.playerOrder.filter(
+        (p) => winners.includes(teamOf(state, p) ?? "") && !state.removedPlayerIds.includes(p),
+      )
+    : winners;
+  const all = members.length > 0 ? members : [state.activePlayerId];
+  const first = all[0]!;
   return {
     state: {
       ...state,
       winnerId: first,
-      winnerIds: winners.length > 0 ? winners : [first],
+      winnerIds: all,
+      winnerTeamId: teamOf(state, first),
       winReason: "roundLimit",
       pendingOccupation: null,
     },
     events: [
       ...events,
-      ...(winners.length > 0 ? winners : [first]).map((playerId): GameEvent => ({
-        type: "gameWon",
-        playerId,
-        reason: "roundLimit",
-      })),
+      ...all.map((playerId): GameEvent => ({ type: "gameWon", playerId, reason: "roundLimit" })),
     ],
   };
 }

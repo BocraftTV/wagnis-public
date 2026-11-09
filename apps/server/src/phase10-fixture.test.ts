@@ -85,7 +85,7 @@ const withState = fixture.rooms.filter((r) => r.label !== "lobby").map((r) => r.
 
 describe("loadState with the Phase-10 fixture (plan 014 B)", () => {
   it.each(withState)(
-    "%s: version 8 loads as 9 with no world events, no event in force and an empty event deck, is written back once, a second load writes nothing",
+    "%s: version 8 loads as 10 with no world events, no event in force and an empty event deck, is written back once, a second load writes nothing",
     (label) => {
       const { roomId, stored } = seed(label);
       expect((JSON.parse(stored) as { stateVersion: number }).stateVersion).toBe(8);
@@ -93,13 +93,13 @@ describe("loadState with the Phase-10 fixture (plan 014 B)", () => {
       const first = loadState(store, store.getRoom(roomId)!, noRng);
       expect(first.ok).toBe(true);
       if (!first.ok || !first.state) throw new Error("not loaded");
-      expect(first.state.stateVersion).toBe(9);
+      expect(first.state.stateVersion).toBe(10);
       expect(first.state.rules.worldEvents).toBe(false);
       expect(first.state.worldEvent).toBeNull();
       expect(first.state.secret.eventDeck).toEqual([]);
       const written = rawRow(roomId);
       expect(written).not.toBe(stored);
-      expect((JSON.parse(written) as GameState).stateVersion).toBe(9);
+      expect((JSON.parse(written) as GameState).stateVersion).toBe(10);
       expect(JSON.parse(written)).toEqual(JSON.parse(JSON.stringify(first.state)));
       const second = loadState(store, store.getRoom(roomId)!, noRng);
       expect(second.ok && second.state).toEqual(first.state);
@@ -231,14 +231,14 @@ describe("old database before plan 014 B B (fixture from the real server, plan 0
     expect(fixture.schemaMetaVersion).toBe(6);
   });
 
-  it("opening it adds world_events = 0 to every row, schema version 7, and a second open changes nothing", async () => {
+  it("opening it adds world_events = 0 to every row, schema version 8, and a second open changes nothing", async () => {
     seedOld();
     const old = new Map(fixture.rooms.map((r) => [r.room.id, r.room]));
     await (await boot()).close();
     servers.pop();
     const db = new Database(dbPath, { readonly: true });
     const rooms = db.prepare("SELECT * FROM rooms").all() as Record<string, unknown>[];
-    expect(db.prepare("SELECT version FROM schema_meta").all()).toEqual([{ version: 7 }]);
+    expect(db.prepare("SELECT version FROM schema_meta").all()).toEqual([{ version: 8 }]);
     db.close();
     expect(rooms).toHaveLength(5);
     for (const r of rooms) {
@@ -263,7 +263,7 @@ describe("old database before plan 014 B B (fixture from the real server, plan 0
     expect(dumpAll()).toBe(first);
   });
 
-  it("the room in the fortify phase loads as version 9, is written back once and plays on", async () => {
+  it("the room in the fortify phase loads as version 10, is written back once and plays on", async () => {
     seedOld();
     const ids = identities("playing-2p-neutral-fortify");
     const roomId = ids[0]!.roomId;
@@ -274,7 +274,7 @@ describe("old database before plan 014 B B (fixture from the real server, plan 0
     expect(first.worldEvents).toBe(false);
     expect(first.game!.worldEvent).toBeNull();
     expect(first.game!.worldEventsLeft).toBe(0);
-    expect((JSON.parse(rawRow(roomId)) as GameState).stateVersion).toBe(9);
+    expect((JSON.parse(rawRow(roomId)) as GameState).stateVersion).toBe(10);
     const activeIdx = ids.findIndex((i) => i.playerId === first.game!.activePlayerId);
     cs[activeIdx]!.send({ type: "action", action: { type: "endPhase" } });
     const after = await cs[1 - activeIdx]!.nextView((v) => v.version > first.version);
@@ -301,7 +301,7 @@ describe("old database before plan 014 B B (fixture from the real server, plan 0
     expect(state.rules.worldEvents).toBe(true);
     expect(state.worldEvent).not.toBeNull();
     expect([6, 7]).toContain(state.secret.eventDeck.length);
-    expect(state.stateVersion).toBe(9);
+    expect(state.stateVersion).toBe(10);
   });
 
   it("the finished room stays finished and shows both options off", async () => {

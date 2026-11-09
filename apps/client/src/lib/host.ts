@@ -79,6 +79,7 @@ export const settingsMessage = (patch: {
   holdToWin?: boolean;
   roundLimit?: 8 | 12 | 16 | null;
   worldEvents?: boolean;
+  teams?: "2v2" | "3v3" | "2v2v2" | null;
 }): ClientMessage => ({ type: "settings", ...patch });
 
 /** "Annas", "Max'" (names ending in s, ß, x or z take only the apostrophe). */
@@ -100,3 +101,9 @@ export const confirmTransferText = (name: string): string =>
 /** Name with the mark for removed players ("Anna (entfernt)"), for the list and for the resolution texts. */
 export const nameWithMark = (name: string, removed: boolean): string =>
   removed ? `${name} (entfernt)` : name;
+export const teamMessage = (playerId: string, team: "A" | "B" | "C" | null): ClientMessage => ({
+  type: "team",
+  playerId,
+  team,
+});
+export const randomTeamsMessage = (): ClientMessage => ({ type: "randomTeams" });

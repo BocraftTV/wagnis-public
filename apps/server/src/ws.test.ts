@@ -74,6 +74,7 @@ describe("hello and snapshots", () => {
         isHost: true,
         connected: true,
         removed: false,
+        team: null,
       },
     ]);
   });

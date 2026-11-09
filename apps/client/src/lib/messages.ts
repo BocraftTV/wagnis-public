@@ -57,6 +57,8 @@ export const wsErrorText: Record<WsErrorCode, string> = {
   INVALID_CHOICE: "Diese Auswahl gibt es nicht.",
   SEA_BLOCKED: "Im Sturm sind die Seewege gesperrt.",
   TRUCE: "In diesem Kontinent herrscht Waffenstillstand.",
+  ALLY_TARGET: "Einen Partner greifst du nicht an.",
+  INVALID_TEAMS: "Die Teams passen nicht: Spielerzahl und Zuteilung prüfen.",
   NOT_FINISHED: "Die Partie läuft noch.",
   CANNOT_REMOVE_SELF: "Gib erst die Host-Rolle ab, dann kann dich der neue Host entfernen.",
   ALREADY_HOST: "Das ist schon der Host.",

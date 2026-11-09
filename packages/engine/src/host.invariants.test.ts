@@ -59,6 +59,7 @@ function check(
         mission: null,
         missionReplaced: false,
         hand: [],
+        allyHands: {},
         suggestedSets: [],
         mustTrade: false,
         missionOffer: null,

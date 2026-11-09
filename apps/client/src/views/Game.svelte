@@ -44,6 +44,7 @@
   } from "../lib/missions.js";
   import { roundText, scoreRows, winnersText } from "../lib/rounds.js";
   import { eventText, eventTitle } from "../lib/events.js";
+  import { mateIds, teamName, teamOfPlayer, teamScoreRows, teamWinText } from "../lib/teams.js";
   import { armiesText } from "../lib/hint.js";
   import { backToLobbyMessage, canBackToLobby, nameWithMark, playerStatus } from "../lib/host.js";
   import type { TerritoryMark } from "../lib/mark.js";
@@ -76,13 +77,16 @@
   const out = $derived(eliminatedPlayers(game));
   const fortifying = $derived(myTurn && game.phase === "fortify" && !finished);
 
+  // Team mates (display only): their territories are no attack targets, and their hands are shown.
+  const mates = $derived(mateIds(game.teams, me));
+  const teamRows = $derived(teamScoreRows(game.teamScores, game.winnerTeamId));
   const neighbors = $derived(
     data ? Object.fromEntries(data.map.territories.map((t) => [t.id, t.neighbors])) : {},
   );
   let selection = $state<Selection>(emptySelection);
   let chosenDice = $state<number | null>(null);
   const targets = $derived(
-    attacking ? targetsFrom(neighbors, game.territories, me, selection.from) : [],
+    attacking ? targetsFrom(neighbors, game.territories, me, selection.from, mates) : [],
   );
   const moveTargets = $derived(fortifying ? fortifyTargets(game.fortify, selection.from) : []);
   const moveOrigins = $derived(
@@ -361,7 +365,9 @@
 
   {#if finished && game.winnerId}
     <div class="winner" role="status">
-      🏆 {winnersText(game.winnerIds, game.winnerId, playerName, me)}{reasonText
+      🏆 {game.winnerTeamId
+        ? teamWinText(game.winnerTeamId, game.winnerIds, playerName)
+        : winnersText(game.winnerIds, game.winnerId, playerName, me)}{reasonText
         ? ` – ${reasonText}`
         : ""}
     </div>
@@ -378,6 +384,22 @@
       {:else}
         <p class="muted" role="status">Warte auf den Host …</p>
       {/if}
+    </section>
+  {/if}
+
+  {#if finished && teamRows.length > 0}
+    <section class="resolution" aria-label="Teamwertung">
+      <h2>Teamwertung</h2>
+      <ul>
+        {#each teamRows as row (row.teamId)}
+          <li>
+            <strong>{row.winner ? "🏆 " : ""}{teamName(row.teamId)}: {row.points} Punkte</strong>
+            <span class="mission-line"
+              >{row.members.map(playerName).join(", ")} · {row.armies} Armeen</span
+            >
+          </li>
+        {/each}
+      </ul>
     </section>
   {/if}
 
@@ -533,6 +555,9 @@
         <li class:active={id === game.activePlayerId} class:out={out.has(id)}>
           <span class="swatch" style:background={colorOf(id)}></span>
           <span>{playerName(id)}{id === me ? " (du)" : ""}</span>
+          {#if teamOfPlayer(game.teams, id)}
+            <span class="out-label team-label">{teamName(teamOfPlayer(game.teams, id)!)}</span>
+          {/if}
           <span class="presence" class:online={p?.connected}>{p?.connected ? "●" : "○"}</span>
           <span class="sr">{p?.connected ? "verbunden" : "getrennt"}</span>
           {#if p?.isHost}<span class="out-label">Host</span>{/if}
@@ -556,6 +581,15 @@
       {:else}
         <p class="muted">Du hast keine Karten. Pro Zug mit Eroberung ziehst du eine.</p>
       {/if}
+      {#each mates as mate (mate)}
+        {@const theirs = game.secret.allyHands[mate] ?? []}
+        <h3 class="mate-hand">Karten von {playerName(mate)} ({theirs.length})</h3>
+        {#if theirs.length > 0}
+          <CardHand hand={theirs} {territoryName} label={`Karten von ${playerName(mate)}`} />
+        {:else}
+          <p class="muted">{playerName(mate)} hat keine Karten.</p>
+        {/if}
+      {/each}
     </section>
   {/if}
 
@@ -680,6 +714,15 @@
   }
   .status .mission-btn {
     margin-left: 0;
+  }
+  .team-label {
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    padding: 0 0.35rem;
+  }
+  .mate-hand {
+    margin: 0.8rem 0 0.3rem;
+    font-size: 0.95rem;
   }
   .event-banner {
     padding: 0.5rem 1rem;

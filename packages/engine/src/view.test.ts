@@ -92,6 +92,9 @@ describe("viewFor", () => {
         "winnerIds",
         "worldEvent",
         "worldEventsLeft",
+        "teams",
+        "winnerTeamId",
+        "teamScores",
         "missions",
       ].sort(),
     );

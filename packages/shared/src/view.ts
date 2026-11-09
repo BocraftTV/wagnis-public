@@ -74,6 +74,17 @@ export const tradeRecordSchema = z.object({
 /** Round limit of the room (plan 014 A, rules.md 11): `null` is off, otherwise 8, 12 or 16 rounds. */
 export const roundLimitSchema = z.union([z.literal(8), z.literal(12), z.literal(16), z.null()]);
 
+/** Team layout of the room (plan 014 C, rules.md 13): `null` is off. */
+export const teamModeSchema = z.union([
+  z.literal("2v2"),
+  z.literal("3v3"),
+  z.literal("2v2v2"),
+  z.null(),
+]);
+export const teamIdSchema = z.enum(["A", "B", "C"]);
+// Only the teams the layout has (A and B in 2v2), so a partial record
+const teamsSchema = z.partialRecord(teamIdSchema, z.array(z.string()));
+
 /** World event kinds (plan 014 B, rules.md 12). */
 export const worldEventKindSchema = z.enum([
   "storm",
@@ -134,6 +145,20 @@ export const gameViewSchema = z.object({
   /** Plan 014 B: the event of this round, or null; and the cards left in the (secret) event deck. */
   worldEvent: worldEventSchema.nullable(),
   worldEventsLeft: z.number().int().nonnegative(),
+  /** Plan 014 C: the teams (public), or null; the winning team after a team game. */
+  teams: teamsSchema.nullable(),
+  winnerTeamId: teamIdSchema.nullable(),
+  /** The score summed per team, only with `winReason: "roundLimit"` in a team game. */
+  teamScores: z
+    .array(
+      z.object({
+        teamId: teamIdSchema,
+        playerIds: z.array(z.string()),
+        points: z.number().int(),
+        armies: z.number().int(),
+      }),
+    )
+    .nullable(),
   activePlayerId: z.string(),
   playerOrder: z.array(z.string()),
   /** Players the host removed (rules.md 1.6); public. */
@@ -199,6 +224,8 @@ export const gameViewSchema = z.object({
     /** Progress for `connectedRealm` and `blitzkrieg`, otherwise null. */
     missionProgress: z.object({ current: z.number().int(), target: z.number().int() }).nullable(),
     hand: z.array(handCardSchema),
+    /** Plan 014 C: the hands of the team mates; empty without teams. */
+    allyHands: z.record(z.string(), z.array(cardSchema)),
     suggestedSets: z.array(suggestedSetSchema),
     mustTrade: z.boolean(),
   }),
@@ -226,6 +253,8 @@ export const roomViewSchema = z.object({
       connected: z.boolean(),
       /** Removed by the host (rules.md 1.6); in the lobby always false, because removed rows are deleted there. */
       removed: z.boolean(),
+      /** Plan 014 C: the player's team (lobby: the host's assignment; game: from the state), or null. */
+      team: teamIdSchema.nullable(),
     }),
   ),
   /** Victory mode of the room: the lobby choice, once the game runs the one in the game state (public, same for all). */
@@ -239,6 +268,8 @@ export const roomViewSchema = z.object({
   roundLimit: roundLimitSchema,
   /** Plan 014 B: world events on or off; the lobby choice, once the game runs the value in the game state (public). */
   worldEvents: z.boolean(),
+  /** Plan 014 C: the team layout; the lobby choice, once the game runs the value in the game state (public). */
+  teams: teamModeSchema,
   /** Number of the game in this room, from 1; rises with every "back to the lobby" (public). */
   gameNo: z.number().int().min(1),
   /**

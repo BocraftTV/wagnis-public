@@ -7,8 +7,10 @@ import {
   getMap,
   getMissionSet,
   getRules,
+  TEAM_IDS,
+  teamSizes,
 } from "@wagnis/engine";
-import type { Rng, RoundLimit } from "@wagnis/engine";
+import type { Rng, RoundLimit, TeamId, TeamMode } from "@wagnis/engine";
 import {
   MAX_PLAYERS,
   WS_CLOSE_HELLO_FAILED,
@@ -26,7 +28,7 @@ import type { Conn } from "./hub.js";
 import { clientIp } from "./ip.js";
 import type { FailureLimiter } from "./rate-limit.js";
 import { loadState, logRejectedState } from "./state.js";
-import type { Store } from "./store.js";
+import type { PlayerRow, Store } from "./store.js";
 
 export interface WsDeps {
   store: Store;
@@ -114,7 +116,10 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
       holdToWin: room.holdToWin,
       roundLimit: room.roundLimit,
       worldEvents: room.worldEvents,
+      teams: room.teams,
     };
+    // Teams (plan 014 C): the assignment of the lobby; the engine checks that it fits the layout.
+    const teams = room.teams ? teamsOf(players) : undefined;
     const missions = map && getMissionSet(map.id);
     if (!map || !rules || !missions) return fail(conn.socket, "INTERNAL");
     const result = createGame({
@@ -124,8 +129,11 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
       rng,
       // The mission list of the map (the mode is the room's choice, set in the rules above)
       missions,
+      teams,
     });
-    if (!result.ok) return fail(conn.socket, "START_FAILED");
+    if (!result.ok) {
+      return fail(conn.socket, result.code === "INVALID_TEAMS" ? "INVALID_TEAMS" : "START_FAILED");
+    }
     store.saveGame(conn.roomId, "playing", result.state, now());
     hub.broadcast(conn.roomId);
   }
@@ -140,12 +148,62 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
       holdToWin?: boolean | undefined;
       roundLimit?: RoundLimit | undefined;
       worldEvents?: boolean | undefined;
+      teams?: TeamMode | undefined;
     },
   ): void {
     const ctx = hostContext(conn);
     if (!ctx) return;
     if (ctx.room.status !== "lobby") return fail(conn.socket, "NOT_IN_LOBBY");
     if (!store.setSettings(conn.roomId, patch, now())) return fail(conn.socket, "NOT_IN_LOBBY");
+    hub.broadcast(conn.roomId);
+  }
+
+  /** The lobby assignment as the engine wants it: team letter to the players in seat order. */
+  function teamsOf(players: PlayerRow[]): Record<TeamId, string[]> {
+    const out: Record<TeamId, string[]> = { A: [], B: [], C: [] };
+    for (const p of players) if (p.team) out[p.team].push(p.id);
+    // An unused team stays out, so a 2v2 layout does not see an empty third team as "too many"
+    return Object.fromEntries(Object.entries(out).filter(([, ids]) => ids.length > 0)) as Record<
+      TeamId,
+      string[]
+    >;
+  }
+
+  /** `team`: the host puts one player into a team or takes them out (lobby only). */
+  function handleTeam(conn: Conn, playerId: string, team: TeamId | null): void {
+    const ctx = hostContext(conn);
+    if (!ctx) return;
+    if (ctx.room.status !== "lobby") return fail(conn.socket, "NOT_IN_LOBBY");
+    const sizes = teamSizes(ctx.room.teams);
+    // A team letter must exist in the chosen layout; without a layout there is nothing to assign
+    if (!sizes || (team !== null && TEAM_IDS.indexOf(team) >= sizes.length))
+      return fail(conn.socket, "INVALID_TEAMS");
+    if (!store.setPlayerTeam(conn.roomId, playerId, team, now()))
+      return fail(conn.socket, "UNKNOWN_PLAYER");
+    hub.broadcast(conn.roomId);
+  }
+
+  /** `randomTeams`: everybody into a team at random, in the sizes of the layout (lobby only). */
+  function handleRandomTeams(conn: Conn): void {
+    const ctx = hostContext(conn);
+    if (!ctx) return;
+    if (ctx.room.status !== "lobby") return fail(conn.socket, "NOT_IN_LOBBY");
+    const sizes = teamSizes(ctx.room.teams);
+    const ids = ctx.players.map((p) => p.id);
+    if (!sizes || ids.length !== sizes.reduce((a, b) => a + b, 0))
+      return fail(conn.socket, "INVALID_TEAMS");
+    // Fisher-Yates over the injected Rng
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = rng.int(i + 1);
+      [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+    }
+    const assignment: Record<string, TeamId> = {};
+    let at = 0;
+    sizes.forEach((size, t) => {
+      for (const id of ids.slice(at, at + size)) assignment[id] = TEAM_IDS[t]!;
+      at += size;
+    });
+    store.setTeams(conn.roomId, assignment, now());
     hub.broadcast(conn.roomId);
   }
 
@@ -310,7 +368,12 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
             holdToWin: msg.holdToWin,
             roundLimit: msg.roundLimit,
             worldEvents: msg.worldEvents,
+            teams: msg.teams,
           });
+        case "team":
+          return handleTeam(conn, msg.playerId, msg.team);
+        case "randomTeams":
+          return handleRandomTeams(conn);
         case "host":
           return handleHost(conn, msg.action, msg.reqId);
         case "backToLobby":

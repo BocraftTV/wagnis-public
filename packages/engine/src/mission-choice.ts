@@ -1,6 +1,7 @@
 import { getMap } from "./maps/index.js";
 import { isEliminated } from "./players.js";
 import { calculateReinforcements } from "./reinforcement.js";
+import { teamMembers } from "./teams.js";
 import { checkVictory } from "./victory.js";
 import type {
   Action,
@@ -34,6 +35,19 @@ const same = (a: Mission, b: Mission): boolean => JSON.stringify(a) === JSON.str
  * card the `originalMission`), the other card is put away face down. The caller has checked everything.
  */
 function choose(state: GameState, playerId: PlayerId, index: 0 | 1): GameState {
+  // In a team game the first choice counts for the whole team (rules.md 13, question 56).
+  let next = state;
+  for (const p of teamMembers(state, playerId)) {
+    if (
+      p === playerId ||
+      (next.secret.missionOffer[p] != null && !next.removedPlayerIds.includes(p))
+    )
+      next = chooseOne(next, p, index);
+  }
+  return next;
+}
+
+function chooseOne(state: GameState, playerId: PlayerId, index: 0 | 1): GameState {
   const offer = state.secret.missionOffer[playerId]!;
   const dealt = state.secret.missionOfferDealt[playerId]!;
   const secret = state.secret;

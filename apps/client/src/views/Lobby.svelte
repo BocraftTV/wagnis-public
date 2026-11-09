@@ -4,7 +4,17 @@
   import type { GameConnection } from "../lib/connection.svelte.js";
   import HostMenu from "../components/HostMenu.svelte";
   import QrCode from "../components/QrCode.svelte";
-  import { settingsMessage } from "../lib/host.js";
+  import { randomTeamsMessage, settingsMessage, teamMessage } from "../lib/host.js";
+  import {
+    assignmentHint,
+    teamLetters,
+    teamModeButton,
+    teamModeChoices,
+    teamModeHint,
+    teamModeLabel,
+    teamName,
+    teamsSectionLabel,
+  } from "../lib/teams.js";
   import {
     fortifyHint,
     fortifyLabel,
@@ -42,6 +52,13 @@
   let innerWidth = $state(800);
   let innerHeight = $state(800);
   let copyState = $state<"idle" | "done" | "failed">("idle");
+  // What is still missing for the chosen team layout (a note for the host; the server checks at the start).
+  const teamNote = $derived(
+    assignmentHint(
+      view.teams,
+      view.players.map((p) => p.team),
+    ),
+  );
 
   async function copyLink() {
     try {
@@ -140,6 +157,27 @@
       </div>
       <p class="muted">{roundLimitHint(view.roundLimit)}</p>
     </section>
+    <section aria-label={teamsSectionLabel}>
+      <h2>{teamsSectionLabel}</h2>
+      <div class="seg" role="group" aria-label={teamsSectionLabel}>
+        {#each teamModeChoices as m (m)}
+          <button
+            class:secondary={view.teams !== m}
+            aria-pressed={view.teams === m}
+            onclick={() => conn.sendHost(settingsMessage({ teams: m }))}>{teamModeButton(m)}</button
+          >
+        {/each}
+      </div>
+      <p class="muted">{teamModeHint(view.teams)}</p>
+      {#if view.teams !== null}
+        <p>
+          <button class="secondary" onclick={() => conn.sendHost(randomTeamsMessage())}>
+            Zufällig zuteilen
+          </button>
+        </p>
+        {#if teamNote}<p class="muted" role="status">{teamNote}</p>{/if}
+      {/if}
+    </section>
     <section aria-label={worldEventsLabel}>
       <h2>{worldEventsLabel}</h2>
       <div class="seg" role="group" aria-label={worldEventsLabel}>
@@ -197,6 +235,8 @@
     <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
     <p class="map">Rundenlimit: {roundLimitLabel(view.roundLimit)}</p>
     <p class="muted">{roundLimitHint(view.roundLimit)}</p>
+    <p class="map">{teamsSectionLabel}: {teamModeLabel(view.teams)}</p>
+    <p class="muted">{teamModeHint(view.teams)}</p>
     <p class="map">{worldEventsLabel}: {view.worldEvents ? "An" : "Aus"}</p>
     <p class="muted">{worldEventsHint(view.worldEvents)}</p>
     {#if view.victoryMode === "missions"}
@@ -216,6 +256,22 @@
           {p.name}{p.id === view.you.playerId ? " (du)" : ""}
           {#if p.isHost}<span class="tag">Host</span>{/if}
         </span>
+        {#if view.teams !== null && !view.you.isHost}
+          <span class="tag">{p.team ? teamName(p.team) : "ohne Team"}</span>
+        {/if}
+        {#if view.teams !== null && view.you.isHost}
+          <span class="teampick" role="group" aria-label={`Team von ${p.name}`}>
+            {#each teamLetters(view.teams) as letter (letter)}
+              <button
+                class="teambtn"
+                class:secondary={p.team !== letter}
+                aria-pressed={p.team === letter}
+                onclick={() => conn.sendHost(teamMessage(p.id, p.team === letter ? null : letter))}
+                >{letter}</button
+              >
+            {/each}
+          </span>
+        {/if}
         <span class="presence" class:online={p.connected}>
           {p.connected ? "verbunden" : "getrennt"}
         </span>
@@ -226,7 +282,7 @@
 
   {#if view.you.isHost}
     <p>
-      <button disabled={view.players.length < 2} onclick={() => conn.sendStart()}>
+      <button disabled={view.players.length < 2 || teamNote !== null} onclick={() => conn.sendStart()}>
         Partie starten
       </button>
     </p>
@@ -255,6 +311,15 @@
 {/if}
 
 <style>
+  .teampick {
+    display: inline-flex;
+    gap: 0.25rem;
+  }
+  .teambtn {
+    min-width: var(--tap);
+    min-height: var(--tap);
+    padding: 0 0.6rem;
+  }
   .lobby {
     max-width: 34rem;
     margin: 0 auto;
