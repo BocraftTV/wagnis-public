@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyAction,
   applyHostAction,
+  calculateReinforcements,
   createDiceRng,
   createGame,
   createSeededRng,
@@ -14,6 +15,7 @@ import {
 import type { Action, GameState, Mission, Rng, TeamId } from "./index.js";
 import { makeState, withMissions } from "./testkit.js";
 import { playRandomGame } from "./playbot.js";
+import { teamMembers } from "./teams.js";
 
 // testland: nordreich (bonus 2) = eisenfurt, rabenhain, grauwacht, tannenfeld; suedmark (bonus 3) = salzmoor,
 // dornental, kupferstadt, nebelkueste. Land borders: eisenfurt-rabenhain, eisenfurt-grauwacht, rabenhain-tannenfeld,
@@ -523,6 +525,155 @@ describe("round limit in a team game (rules.md 11.2, 13)", () => {
     expect(teamScoreboard(s).map((t) => [t.teamId, t.points])).toEqual([
       ["A", 1],
       ["B", 2],
+    ]);
+  });
+});
+
+describe("continent bonus for the team (plan 015, questions 71 to 74)", () => {
+  /** Passes the turn from c to b (order a, c, b, d) and returns b's reinforcements. */
+  const reinforcementsOfB = (
+    t: Record<string, [string | null, number]>,
+    extra = {},
+    rules = rules2v2,
+  ) => {
+    const s = board(t, { activePlayerId: "c", phase: "fortify", ...extra }, rules);
+    const r = applyHostAction(s, { type: "skipTurn", turn: s.turn }, noRng);
+    if (!r.ok) throw new Error(r.code);
+    expect(r.state.activePlayerId).toBe("b");
+    return r.state.reinforcementsLeft;
+  };
+
+  it("a continent split between the partners gives each of them the full bonus", () => {
+    const t: Record<string, [string | null, number]> = {
+      eisenfurt: ["a", 1],
+      rabenhain: ["a", 1],
+      grauwacht: ["b", 1],
+      tannenfeld: ["b", 1],
+      salzmoor: ["c", 1],
+      dornental: ["d", 1],
+    };
+    expect(reinforcementsOfB(t)).toBe(3 + 2);
+    const s = board(t);
+    expect(
+      calculateReinforcements(testland, rules2v2, s.territories, "a", null, teamMembers(s, "a")),
+    ).toBe(3 + 2);
+  });
+
+  it("a partner without a territory in the continent gets the bonus too", () => {
+    expect(
+      reinforcementsOfB({
+        eisenfurt: ["a", 1],
+        rabenhain: ["a", 1],
+        grauwacht: ["a", 1],
+        tannenfeld: ["a", 1],
+        salzmoor: ["b", 1],
+        dornental: ["c", 1],
+        kupferstadt: ["d", 1],
+      }),
+    ).toBe(3 + 2);
+  });
+
+  it("one enemy territory in the continent spoils it for the whole team", () => {
+    expect(
+      reinforcementsOfB({
+        eisenfurt: ["a", 1],
+        rabenhain: ["a", 1],
+        grauwacht: ["b", 1],
+        tannenfeld: ["c", 1],
+        salzmoor: ["d", 1],
+      }),
+    ).toBe(3);
+  });
+
+  it("goldRush doubles the team bonus for every member", () => {
+    expect(
+      reinforcementsOfB(
+        {
+          eisenfurt: ["a", 1],
+          rabenhain: ["a", 1],
+          grauwacht: ["b", 1],
+          tannenfeld: ["b", 1],
+          salzmoor: ["c", 1],
+          dornental: ["d", 1],
+        },
+        {
+          worldEvent: {
+            kind: "goldRush",
+            continentId: "nordreich",
+            playerIds: [],
+            territoryIds: [],
+          },
+        },
+        { ...rules2v2, worldEvents: true },
+      ),
+    ).toBe(3 + 4);
+  });
+
+  it("3v3: all three members get the bonus", () => {
+    const s = makeState({
+      players: ["a", "d", "b", "e", "c", "f"],
+      territories: {
+        eisenfurt: ["a", 1],
+        rabenhain: ["b", 1],
+        grauwacht: ["b", 1],
+        tannenfeld: ["a", 1],
+        salzmoor: ["d", 1],
+        dornental: ["e", 1],
+        kupferstadt: ["f", 1],
+        nebelkueste: ["c", 1],
+      },
+      fill: null,
+      overrides: {
+        rules: { ...testlandRules, teams: "3v3" as const, victoryMode: "domination" as const },
+        teams: { A: ["a", "b", "c"], B: ["d", "e", "f"] } as Record<TeamId, string[]>,
+      },
+    });
+    for (const p of ["a", "b", "c"])
+      expect(
+        calculateReinforcements(testland, s.rules, s.territories, p, null, teamMembers(s, p)),
+      ).toBe(3 + 2);
+    expect(
+      calculateReinforcements(testland, s.rules, s.territories, "d", null, teamMembers(s, "d")),
+    ).toBe(3);
+  });
+
+  it("without teams only the own territories count, as before", () => {
+    const s = makeState({
+      players: ["a", "b"],
+      territories: {
+        eisenfurt: ["a", 1],
+        rabenhain: ["a", 1],
+        grauwacht: ["a", 1],
+        tannenfeld: ["b", 1],
+      },
+      fill: null,
+    });
+    expect(teamMembers(s, "a")).toEqual(["a"]);
+    expect(
+      calculateReinforcements(testland, s.rules, s.territories, "a", null, teamMembers(s, "a")),
+    ).toBe(3);
+  });
+
+  it("round limit: each member's row shows the team continent, the team sum counts it once", () => {
+    const s = board({
+      eisenfurt: ["a", 3],
+      rabenhain: ["a", 1],
+      grauwacht: ["b", 1],
+      tannenfeld: ["b", 2],
+      salzmoor: ["c", 1],
+      dornental: ["d", 1],
+    });
+    expect(
+      scoreboard(s).map((e) => [e.playerId, e.territories, e.continentBonus, e.points]),
+    ).toEqual([
+      ["a", 2, 2, 4],
+      ["c", 1, 0, 1],
+      ["b", 2, 2, 4],
+      ["d", 1, 0, 1],
+    ]);
+    expect(teamScoreboard(s)).toEqual([
+      { teamId: "A", playerIds: ["a", "b"], points: 4 + 2, armies: 7 },
+      { teamId: "B", playerIds: ["c", "d"], points: 2, armies: 2 },
     ]);
   });
 });

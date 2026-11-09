@@ -91,6 +91,7 @@ export function startFirstTurn(state: GameState, events: GameEvent[]): ActionRes
     state.territories,
     first,
     state.worldEvent,
+    teamMembers(state, first),
   );
   const next: GameState = {
     ...state,

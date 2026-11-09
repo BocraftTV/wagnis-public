@@ -7,7 +7,7 @@ import { validateMap } from "./map/validate.js";
 import { calculateReinforcements } from "./reinforcement.js";
 import { shuffle } from "./shuffle.js";
 import { STATE_VERSION } from "./state-version.js";
-import { TEAM_IDS, teamSizes } from "./teams.js";
+import { TEAM_IDS, teamMembers, teamSizes } from "./teams.js";
 import { checkVictory } from "./victory.js";
 import { drawWorldEvent, freshEventDeck } from "./world-events.js";
 import type {
@@ -211,6 +211,7 @@ export function createGame({
           drawn.state.territories,
           firstPlayerId,
           drawn.state.worldEvent,
+          teamMembers(drawn.state, firstPlayerId),
         ),
   };
   // With the draft the first turn only starts once everybody has chosen (`startFirstTurn`, mission-choice.ts).

@@ -39,6 +39,7 @@ describe("team layouts", () => {
   it("hints", () => {
     expect(teamModeHint(null)).toContain("für sich");
     expect(teamModeHint("2v2")).toContain("genau 4 Spieler");
+    expect(teamModeHint("3v3")).toContain("jeder im Team den vollen Bonus");
   });
 });
 

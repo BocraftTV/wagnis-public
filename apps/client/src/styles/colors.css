@@ -10,6 +10,20 @@
   --player-neutral: #8a8f98;
 }
 
+/* Team color families (plan 015): in a team game a player gets the family of the team, the shade by seat order within
+   the team (shade 0 and 1 in 2v2 and 2v2v2, all three in 3v3). The base shades are the player colors above. */
+:root {
+  --team-a-0: #0072b2;
+  --team-a-1: #56b4e9;
+  --team-a-2: #0b3f66;
+  --team-b-0: #d55e00;
+  --team-b-1: #f0a35e;
+  --team-b-2: #8a3400;
+  --team-c-0: #009e73;
+  --team-c-1: #7fd6b8;
+  --team-c-2: #005740;
+}
+
 /* Map colors (atlas look, plan 006): paper, sea, coast halo, ink, frame, borders, sea routes, army coins, selection
    rings, labels, patterns and the lighting of the land. The continent tints (12 % over the owner color) and the
    owner colors above are the only colors on the land; the SVG itself contains no color values. */

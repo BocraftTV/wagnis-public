@@ -2,6 +2,7 @@ import { drawCard } from "./cards.js";
 import { getMap } from "./maps/index.js";
 import { isEliminated } from "./players.js";
 import { calculateReinforcements } from "./reinforcement.js";
+import { teamMembers } from "./teams.js";
 import { checkTurnStart, finishByRoundLimit, markVictoryPending } from "./victory.js";
 import { drawWorldEvent, eventOf } from "./world-events.js";
 import type { ActionResult, GameEvent, GameState, PlayerId, Rng } from "./types.js";
@@ -60,6 +61,7 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
     base.territories,
     nextId,
     base.worldEvent,
+    teamMembers(base, nextId),
   );
   const turn = after.turn + 1;
   const next: GameState = {

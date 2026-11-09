@@ -28,6 +28,7 @@
     modeLabel,
   } from "../lib/mapname.js";
   import { worldEventsHint, worldEventsLabel } from "../lib/events.js";
+  import { ownerColor } from "../lib/owner.js";
   import { qrHint, qrTarget } from "../lib/qr/target.js";
   import {
     roundLimitChoices,
@@ -251,7 +252,7 @@
   <ul class="players">
     {#each view.players as p (p.id)}
       <li>
-        <span class="swatch" style:background={`var(--player-${p.seat})`}></span>
+        <span class="swatch" style:background={ownerColor(p.id, view.players)}></span>
         <span class="name">
           {p.name}{p.id === view.you.playerId ? " (du)" : ""}
           {#if p.isHost}<span class="tag">Host</span>{/if}

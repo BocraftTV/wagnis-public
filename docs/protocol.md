@@ -532,7 +532,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
     Zahl der Karten im geheimen Stapel (nie sein Inhalt).
   - Während `fog` stehen `armies`, `maxAttackDice` und `maxMove` fremder und neutraler Gebiete auf `null` (der Client zeigt „?“), und `pendingOccupation` eines anderen Spielers ist `null`.
   - `teams` (Plan 014 C): `null` oder `{ "A": [Spieler-IDs], "B": [...], "C": [...] }` mit den Teams des Layouts (öffentlich). `winnerTeamId`: nach einem Teamspiel das Siegerteam. `teamScores`: nur bei
-    `winReason: "roundLimit"` im Teamspiel die Summen je Team (`teamId`, `playerIds`, `points`, `armies`). `secret.allyHands`: die Handkarten der Teampartner (nur im eigenen View, `{}` ohne Teams).
+    `winReason: "roundLimit"` im Teamspiel die Summen je Team (`teamId`, `playerIds`, `points`, `armies`; `points` zählt einen vom Team gehaltenen Kontinent einmal, Plan 015).
+    In `scores` zeigt `continentBonus` im Teamspiel die Kontinente des Teams; die Teamsumme ist darum nicht die Summe der Zeilen. `secret.allyHands`: die Handkarten der Teampartner (nur im eigenen View, `{}` ohne Teams).
   - `winnerIds`: alle Sieger, leer bis zum Spielende; mehrere nur bei Gleichstand nach dem Rundenlimit (`winnerId` ist dann der erste in Sitzreihenfolge).
     `scores`: nur bei `winReason: "roundLimit"` die Wertung je Spieler (`playerId`, `territories`, `continentBonus`, `points`, `armies`), sonst `null`.
   - `winnerId`: `null` oder die Spieler-ID, sobald jemand gewonnen hat (nur noch ein Spieler übrig oder im Modus

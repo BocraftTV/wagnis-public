@@ -750,6 +750,7 @@
     border-radius: 50%;
     vertical-align: -0.1rem;
     margin-right: 0.3rem;
+    flex: none; /* never squeezed away next to the team label: the shade tells the partners apart (plan 015) */
   }
   .body {
     flex: 1;
@@ -963,13 +964,18 @@
   }
   .legend li {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.3rem;
     min-height: 2.2rem;
-    padding: 0 0.7rem;
+    padding: 0.2rem 0.7rem;
     background: var(--panel);
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: 1.1rem;
+  }
+  /* In the narrow side panel a long row wraps between its parts, not inside "0 Karten" or "Team A". */
+  .legend li > span {
+    white-space: nowrap;
   }
   .legend li.active {
     border-color: var(--accent);

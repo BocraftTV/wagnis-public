@@ -35,7 +35,7 @@ export function teamModePlayers(mode: TeamMode): number | null {
 
 export function teamModeHint(mode: TeamMode): string {
   if (mode === null) return "Jeder spielt für sich.";
-  return `${teamModeLabel(mode)}, genau ${teamModePlayers(mode)} Spieler. Partner sehen gegenseitig ihre Karten, verschieben Armeen auch in Partnergebiete, greifen sich aber nie an. Jedes Team hat eine gemeinsame Mission; gewinnt einer, gewinnt das Team.`;
+  return `${teamModeLabel(mode)}, genau ${teamModePlayers(mode)} Spieler. Partner sehen gegenseitig ihre Karten, verschieben Armeen auch in Partnergebiete, greifen sich aber nie an. Hält das Team einen Kontinent ganz, bekommt jeder im Team den vollen Bonus. Jedes Team hat eine gemeinsame Mission; gewinnt einer, gewinnt das Team. Jedes Team hat eine Farbe, die Partner in helleren und dunkleren Tönen.`;
 }
 
 /** The team letters a layout has, in order. */

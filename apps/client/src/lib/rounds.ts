@@ -17,7 +17,7 @@ export function roundLimitLabel(limit: RoundLimit): string {
 export function roundLimitHint(limit: RoundLimit): string {
   return limit === null
     ? "Die Partie läuft, bis jemand gewinnt."
-    : `Nach ${limit} Runden endet die Partie mit einer Wertung: ein Punkt je Gebiet plus der Bonus jedes ganz gehaltenen Kontinents, bei Gleichstand zählen die Armeen. Wer vorher gewinnt, gewinnt sofort.`;
+    : `Nach ${limit} Runden endet die Partie mit einer Wertung: ein Punkt je Gebiet plus der Bonus jedes ganz gehaltenen Kontinents, bei Gleichstand zählen die Armeen. Mit Teams zählt die Summe des Teams, ein Kontinent des Teams einmal. Wer vorher gewinnt, gewinnt sofort.`;
 }
 
 /** "Runde 5 von 12", or "Runde 5" without a limit. */
