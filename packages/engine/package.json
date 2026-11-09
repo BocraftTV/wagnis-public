@@ -1,0 +1,26 @@
+{
+  "name": "@wagnis/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "wagnis-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./map-data": {
+      "wagnis-source": "./src/map-data.ts",
+      "types": "./dist/map-data.d.ts",
+      "default": "./dist/map-data.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

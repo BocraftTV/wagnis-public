@@ -1,0 +1,53 @@
+/* The six player colors, defined once. Index = seat. */
+:root {
+  --player-0: #0072b2;
+  --player-1: #d55e00;
+  --player-2: #009e73;
+  --player-3: #e69f00;
+  --player-4: #cc79a7;
+  --player-5: #56b4e9;
+  /* Neutral owner (2 players): not a seat. */
+  --player-neutral: #8a8f98;
+}
+
+/* Map colors (atlas look, plan 006): paper, sea, coast halo, ink, frame, borders, sea routes, army coins, selection
+   rings, labels, patterns and the lighting of the land. The continent tints (12 % over the owner color) and the
+   owner colors above are the only colors on the land; the SVG itself contains no color values. */
+:root {
+  --map-paper: #efe3c2;
+  --map-sea-0: #bcd8df;
+  --map-sea-1: #9cc3cf;
+  --map-halo: #e9f2f3;
+  --map-grid: #ffffff;
+  --map-wave: #7aa7b5;
+  --map-ink: #2a1d12;
+  --map-border: #5b4630;
+  --map-continent-border: #2a1d12;
+  --map-frame: #5b4630;
+  --map-label-halo: #f5ecd2;
+  --map-counter-field: #f8f0da;
+  --map-counter-ink: #1f160d;
+  --map-sea-route: #4a3624;
+  --map-light: #ffffff;
+  --map-shade: #1a1208;
+  --map-rose-dark: #5b4630;
+  --map-rose-light: #efe3c2;
+  --map-pattern: #3a2a1a;
+  --map-flash: #ffffff;
+  --map-ring-under: rgba(0, 0, 0, 0.75);
+  --map-hint-bg: rgba(18, 22, 28, 0.88);
+  --continent-nordamerika: #b8d4a0;
+  --continent-karibischer-bogen: #f0c8a0;
+  --continent-suedamerika: #98d0c0;
+  --continent-europa: #a8bce6;
+  --continent-afrika: #e8d08c;
+  --continent-vorderasien: #d8a8c0;
+  --continent-asien: #b8a8d8;
+  --continent-ozeanien: #e8a8a0;
+}
+
+/* QR code (plan 008): dark on light in every color scheme, cameras need the contrast. */
+:root {
+  --qr-dark: #101418;
+  --qr-light: #ffffff;
+}

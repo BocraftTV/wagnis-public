@@ -1,0 +1,120 @@
+{
+  "mapId": "testland",
+  "rules": {
+    "startArmies": {
+      "2": 8,
+      "3": 7,
+      "4": 6,
+      "5": 5,
+      "6": 4
+    },
+    "minReinforcement": 3,
+    "territoryDivisor": 3,
+    "initialPlacement": "auto",
+    "fortifyReach": "connected",
+    "cards": {
+      "jokers": 2,
+      "tradeValues": {
+        "infantry": 4,
+        "cavalry": 6,
+        "artillery": 8,
+        "mixed": 10
+      },
+      "territoryBonus": 2,
+      "mustTradeAt": 5
+    }
+  },
+  "playerOrder": ["04ddbd65-6dc7-4356-bd2e-6a40f640827d", "7a080323-6d70-438a-ae5f-092f793c9cb4"],
+  "activePlayerId": "04ddbd65-6dc7-4356-bd2e-6a40f640827d",
+  "phase": "attack",
+  "turn": 3,
+  "reinforcementsLeft": 0,
+  "territories": {
+    "kupferstadt": {
+      "ownerId": "7a080323-6d70-438a-ae5f-092f793c9cb4",
+      "armies": 1
+    },
+    "grauwacht": {
+      "ownerId": "04ddbd65-6dc7-4356-bd2e-6a40f640827d",
+      "armies": 2
+    },
+    "rabenhain": {
+      "ownerId": "7a080323-6d70-438a-ae5f-092f793c9cb4",
+      "armies": 2
+    },
+    "eisenfurt": {
+      "ownerId": "04ddbd65-6dc7-4356-bd2e-6a40f640827d",
+      "armies": 1
+    },
+    "dornental": {
+      "ownerId": "04ddbd65-6dc7-4356-bd2e-6a40f640827d",
+      "armies": 1
+    },
+    "tannenfeld": {
+      "ownerId": "04ddbd65-6dc7-4356-bd2e-6a40f640827d",
+      "armies": 1
+    },
+    "salzmoor": {
+      "ownerId": "04ddbd65-6dc7-4356-bd2e-6a40f640827d",
+      "armies": 7
+    },
+    "nebelkueste": {
+      "ownerId": "7a080323-6d70-438a-ae5f-092f793c9cb4",
+      "armies": 3
+    }
+  },
+  "secret": {
+    "mission": {
+      "7a080323-6d70-438a-ae5f-092f793c9cb4": null,
+      "04ddbd65-6dc7-4356-bd2e-6a40f640827d": null
+    },
+    "hand": {
+      "7a080323-6d70-438a-ae5f-092f793c9cb4": ["card-joker-2"],
+      "04ddbd65-6dc7-4356-bd2e-6a40f640827d": ["card-grauwacht"]
+    },
+    "deck": [
+      "card-tannenfeld",
+      "card-kupferstadt",
+      "card-nebelkueste",
+      "card-eisenfurt",
+      "card-rabenhain",
+      "card-dornental",
+      "card-joker-1",
+      "card-salzmoor"
+    ],
+    "discard": []
+  },
+  "pendingOccupation": null,
+  "conqueredThisTurn": true,
+  "winnerId": null,
+  "lastCombat": {
+    "seq": 3,
+    "attackerId": "04ddbd65-6dc7-4356-bd2e-6a40f640827d",
+    "defenderId": "7a080323-6d70-438a-ae5f-092f793c9cb4",
+    "from": "dornental",
+    "to": "salzmoor",
+    "rolls": [
+      {
+        "attackerDice": [6, 5, 4],
+        "defenderDice": [6, 2],
+        "attackerLosses": 1,
+        "defenderLosses": 1
+      },
+      {
+        "attackerDice": [3, 3, 2],
+        "defenderDice": [1],
+        "attackerLosses": 0,
+        "defenderLosses": 1
+      }
+    ],
+    "summary": {
+      "rollCount": 2,
+      "attackerLosses": 1,
+      "defenderLosses": 2,
+      "conquered": true
+    }
+  },
+  "combatSeq": 3,
+  "lastTrade": null,
+  "tradeSeq": 0
+}

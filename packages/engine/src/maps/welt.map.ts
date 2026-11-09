@@ -1,0 +1,307 @@
+import type { MapDefinition } from "../map/types.js";
+
+/**
+ * The world map: 42 territories in 8 continents (docs/weltkarte-entwurf.md, rules.md question 7). The
+ * territory order is part of the data: it fixes the card symbols (rules.md question 12). Land borders and sea
+ * routes are not told apart here; the client draws the sea routes from its own list.
+ */
+export const welt: MapDefinition = {
+  id: "welt",
+  name: "Welt",
+  continents: [
+    {
+      id: "nordamerika",
+      name: "Nordamerika",
+      bonus: 3,
+    },
+    {
+      id: "karibischer-bogen",
+      name: "Karibischer Bogen",
+      bonus: 2,
+    },
+    {
+      id: "suedamerika",
+      name: "Südamerika",
+      bonus: 2,
+    },
+    {
+      id: "europa",
+      name: "Europa",
+      bonus: 4,
+    },
+    {
+      id: "afrika",
+      name: "Afrika",
+      bonus: 4,
+    },
+    {
+      id: "vorderasien",
+      name: "Vorderasien",
+      bonus: 2,
+    },
+    {
+      id: "asien",
+      name: "Asien",
+      bonus: 6,
+    },
+    {
+      id: "ozeanien",
+      name: "Ozeanien",
+      bonus: 2,
+    },
+  ],
+  territories: [
+    {
+      id: "nordwestland",
+      name: "Nordwestland",
+      continentId: "nordamerika",
+      neighbors: ["hudsonland", "ostsibirien", "pazifikkueste"],
+    },
+    {
+      id: "hudsonland",
+      name: "Hudsonland",
+      continentId: "nordamerika",
+      neighbors: ["atlantikkueste", "groenland", "nordwestland", "pazifikkueste", "praerieland"],
+    },
+    {
+      id: "groenland",
+      name: "Grönland",
+      continentId: "nordamerika",
+      neighbors: ["hudsonland", "nebelinseln"],
+    },
+    {
+      id: "pazifikkueste",
+      name: "Pazifikküste",
+      continentId: "nordamerika",
+      neighbors: ["hudsonland", "mexiko", "nordwestland", "praerieland"],
+    },
+    {
+      id: "praerieland",
+      name: "Prärieland",
+      continentId: "nordamerika",
+      neighbors: ["atlantikkueste", "hudsonland", "mexiko", "pazifikkueste"],
+    },
+    {
+      id: "atlantikkueste",
+      name: "Atlantikküste",
+      continentId: "nordamerika",
+      neighbors: ["antillen", "hudsonland", "praerieland"],
+    },
+    {
+      id: "mexiko",
+      name: "Mexiko",
+      continentId: "karibischer-bogen",
+      neighbors: ["landenge", "pazifikkueste", "praerieland"],
+    },
+    {
+      id: "landenge",
+      name: "Landenge",
+      continentId: "karibischer-bogen",
+      neighbors: ["mexiko", "orinokoland"],
+    },
+    {
+      id: "antillen",
+      name: "Antillen",
+      continentId: "karibischer-bogen",
+      neighbors: ["atlantikkueste", "orinokoland"],
+    },
+    {
+      id: "orinokoland",
+      name: "Orinokoland",
+      continentId: "karibischer-bogen",
+      neighbors: ["amazonien", "antillen", "hochanden", "landenge"],
+    },
+    {
+      id: "amazonien",
+      name: "Amazonien",
+      continentId: "suedamerika",
+      neighbors: ["hochanden", "nordostkueste", "orinokoland", "suedkegel"],
+    },
+    {
+      id: "nordostkueste",
+      name: "Nordostküste",
+      continentId: "suedamerika",
+      neighbors: ["amazonien", "sahelguertel", "suedkegel"],
+    },
+    {
+      id: "hochanden",
+      name: "Hochanden",
+      continentId: "suedamerika",
+      neighbors: ["amazonien", "orinokoland", "suedkegel"],
+    },
+    {
+      id: "suedkegel",
+      name: "Südkegel",
+      continentId: "suedamerika",
+      neighbors: ["amazonien", "hochanden", "nordostkueste"],
+    },
+    {
+      id: "nebelinseln",
+      name: "Nebelinseln",
+      continentId: "europa",
+      neighbors: ["atlantikmark", "groenland", "nordlande"],
+    },
+    {
+      id: "nordlande",
+      name: "Nordlande",
+      continentId: "europa",
+      neighbors: ["mittelland", "nebelinseln", "osteuropa"],
+    },
+    {
+      id: "atlantikmark",
+      name: "Atlantikmark",
+      continentId: "europa",
+      neighbors: ["adriaraum", "atlasland", "mittelland", "nebelinseln"],
+    },
+    {
+      id: "mittelland",
+      name: "Mittelland",
+      continentId: "europa",
+      neighbors: ["adriaraum", "atlantikmark", "nordlande", "osteuropa"],
+    },
+    {
+      id: "adriaraum",
+      name: "Adriaraum",
+      continentId: "europa",
+      neighbors: ["anatolien", "atlantikmark", "mittelland", "osteuropa"],
+    },
+    {
+      id: "osteuropa",
+      name: "Osteuropäische Ebene",
+      continentId: "europa",
+      neighbors: ["adriaraum", "anatolien", "mittelland", "nordlande", "turan", "westsibirien"],
+    },
+    {
+      id: "atlasland",
+      name: "Atlasland",
+      continentId: "afrika",
+      neighbors: ["atlantikmark", "nilland", "sahelguertel"],
+    },
+    {
+      id: "nilland",
+      name: "Nilland",
+      continentId: "afrika",
+      neighbors: ["atlasland", "ostafrika", "sahelguertel", "zweistromland"],
+    },
+    {
+      id: "sahelguertel",
+      name: "Sahelgürtel",
+      continentId: "afrika",
+      neighbors: ["atlasland", "kongobecken", "nilland", "nordostkueste"],
+    },
+    {
+      id: "kongobecken",
+      name: "Kongobecken",
+      continentId: "afrika",
+      neighbors: ["ostafrika", "sahelguertel", "suedspitze"],
+    },
+    {
+      id: "ostafrika",
+      name: "Ostafrikanischer Graben",
+      continentId: "afrika",
+      neighbors: ["kongobecken", "nilland", "suedspitze", "wuestenhalbinsel"],
+    },
+    {
+      id: "suedspitze",
+      name: "Südspitze",
+      continentId: "afrika",
+      neighbors: ["kongobecken", "ostafrika"],
+    },
+    {
+      id: "anatolien",
+      name: "Anatolien",
+      continentId: "vorderasien",
+      neighbors: ["adriaraum", "iranhochland", "osteuropa", "zweistromland"],
+    },
+    {
+      id: "zweistromland",
+      name: "Zweistromland",
+      continentId: "vorderasien",
+      neighbors: ["anatolien", "iranhochland", "nilland", "wuestenhalbinsel"],
+    },
+    {
+      id: "wuestenhalbinsel",
+      name: "Wüstenhalbinsel",
+      continentId: "vorderasien",
+      neighbors: ["ostafrika", "zweistromland"],
+    },
+    {
+      id: "iranhochland",
+      name: "Iranisches Hochland",
+      continentId: "vorderasien",
+      neighbors: ["anatolien", "subkontinent", "turan", "zweistromland"],
+    },
+    {
+      id: "westsibirien",
+      name: "Westsibirien",
+      continentId: "asien",
+      neighbors: ["mongolei", "osteuropa", "ostsibirien", "turan"],
+    },
+    {
+      id: "ostsibirien",
+      name: "Ostsibirien",
+      continentId: "asien",
+      neighbors: ["japan", "kernland", "mongolei", "nordwestland", "westsibirien"],
+    },
+    {
+      id: "turan",
+      name: "Turan",
+      continentId: "asien",
+      neighbors: ["hochasien", "iranhochland", "osteuropa", "westsibirien"],
+    },
+    {
+      id: "mongolei",
+      name: "Mongolei",
+      continentId: "asien",
+      neighbors: ["hochasien", "kernland", "ostsibirien", "westsibirien"],
+    },
+    {
+      id: "hochasien",
+      name: "Hochasien",
+      continentId: "asien",
+      neighbors: ["kernland", "mongolei", "subkontinent", "turan"],
+    },
+    {
+      id: "kernland",
+      name: "Chinesisches Kernland",
+      continentId: "asien",
+      neighbors: ["hinterindien", "hochasien", "japan", "mongolei", "ostsibirien"],
+    },
+    {
+      id: "subkontinent",
+      name: "Subkontinent",
+      continentId: "asien",
+      neighbors: ["hinterindien", "hochasien", "iranhochland"],
+    },
+    {
+      id: "hinterindien",
+      name: "Hinterindien",
+      continentId: "asien",
+      neighbors: ["kernland", "subkontinent", "sundainseln"],
+    },
+    {
+      id: "japan",
+      name: "Japan",
+      continentId: "asien",
+      neighbors: ["kernland", "ostsibirien"],
+    },
+    {
+      id: "sundainseln",
+      name: "Sundainseln",
+      continentId: "ozeanien",
+      neighbors: ["hinterindien", "neuguinea", "suedland"],
+    },
+    {
+      id: "neuguinea",
+      name: "Neuguinea",
+      continentId: "ozeanien",
+      neighbors: ["suedland", "sundainseln"],
+    },
+    {
+      id: "suedland",
+      name: "Südland",
+      continentId: "ozeanien",
+      neighbors: ["neuguinea", "sundainseln"],
+    },
+  ],
+};

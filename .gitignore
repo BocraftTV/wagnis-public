@@ -1,0 +1,14 @@
+node_modules/
+dist/
+data/
+.env
+*.db
+*.db-wal
+*.db-shm
+.agent-office/
+*.log
+.DS_Store
+apps/server/.test-tmp/
+.smoke-tmp/
+.render-tmp/
+.geo-tmp/

@@ -1,0 +1,10 @@
+node_modules
+dist
+data
+package-lock.json
+.agent-office
+*.svelte
+.geo-tmp
+.render-tmp
+docs/plans/006-stilprobe
+apps/client/src/maps/welt.shapes.ts
