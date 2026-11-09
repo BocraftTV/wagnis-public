@@ -13,7 +13,7 @@ import type {
 } from "./types.js";
 
 /** Rules as saved before phase 3: no `fortifyReach`, no `cards` (or only part of them). */
-type LegacyRules = Omit<RuleConfig, "fortifyReach" | "cards" | "victoryMode"> & {
+type LegacyRules = Omit<RuleConfig, "fortifyReach" | "fortifyMoves" | "cards" | "victoryMode"> & {
   fortifyReach?: RuleConfig["fortifyReach"];
   cards?: Partial<Omit<CardRules, "tradeValues">> & {
     tradeValues?: Partial<CardRules["tradeValues"]>;
@@ -27,16 +27,22 @@ type LegacySecret = { mission: Record<PlayerId, unknown>; hand: SecretState["han
 /** The state format up to phase 3 (no `stateVersion`, `victoryMode`, `winReason`, `originalMission`, ...). */
 export type GameStateV3 = Omit<
   GameState,
-  "rules" | "secret" | "winReason" | "stateVersion" | "removedPlayerIds"
+  "rules" | "secret" | "winReason" | "stateVersion" | "removedPlayerIds" | "fortifyMovesDone"
 > & {
-  rules: Omit<RuleConfig, "victoryMode">;
+  rules: Omit<RuleConfig, "victoryMode" | "fortifyMoves">;
   secret: Omit<SecretState, "mission" | "originalMission" | "missionReplaced"> & {
     mission: Record<PlayerId, unknown>;
   };
 };
 
+/** The state format of phase 6a (version 5): everything of version 6 except `fortifyMovesDone` and `rules.fortifyMoves`. */
+export type GameStateV5 = Omit<GameState, "fortifyMovesDone" | "rules" | "stateVersion"> & {
+  rules: Omit<RuleConfig, "fortifyMoves">;
+  stateVersion: 5;
+};
+
 /** The state format of phases 4 and 5: everything of version 5 except `removedPlayerIds`. */
-export type GameStateV4 = Omit<GameState, "removedPlayerIds" | "stateVersion"> & {
+export type GameStateV4 = Omit<GameStateV5, "removedPlayerIds" | "stateVersion"> & {
   stateVersion: 4;
 };
 

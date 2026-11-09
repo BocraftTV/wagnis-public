@@ -106,7 +106,11 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
     // Map, rule values and mission list of the room's map; all three are registered together.
     const map = getMap(room.mapId);
     const baseRules = map && getRules(map.id);
-    const rules = baseRules && { ...baseRules, victoryMode: room.victoryMode };
+    const rules = baseRules && {
+      ...baseRules,
+      victoryMode: room.victoryMode,
+      fortifyMoves: room.fortifyMoves,
+    };
     const missions = map && getMissionSet(map.id);
     if (!map || !rules || !missions) return fail(conn.socket, "INTERNAL");
     const result = createGame({
@@ -124,7 +128,11 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
 
   function handleSettings(
     conn: Conn,
-    patch: { mapId?: MapId | undefined; victoryMode?: "missions" | "domination" | undefined },
+    patch: {
+      mapId?: MapId | undefined;
+      victoryMode?: "missions" | "domination" | undefined;
+      fortifyMoves?: 1 | 2 | undefined;
+    },
   ): void {
     const ctx = hostContext(conn);
     if (!ctx) return;
@@ -286,7 +294,11 @@ export async function registerWebSocket(app: FastifyInstance, deps: WsDeps): Pro
         case "action":
           return handleAction(conn, msg.action, msg.reqId);
         case "settings":
-          return handleSettings(conn, { mapId: msg.mapId, victoryMode: msg.victoryMode });
+          return handleSettings(conn, {
+            mapId: msg.mapId,
+            victoryMode: msg.victoryMode,
+            fortifyMoves: msg.fortifyMoves,
+          });
         case "host":
           return handleHost(conn, msg.action, msg.reqId);
         case "backToLobby":

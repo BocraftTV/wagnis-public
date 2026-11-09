@@ -40,6 +40,7 @@ const view = {
   you: { playerId: "p1", isHost: true },
   players: [{ id: "p1", name: "Jakob", seat: 0, isHost: true, connected: true, removed: false }],
   victoryMode: "missions",
+  fortifyMoves: 1,
   gameNo: 1,
   publicUrl: null,
   game: {
@@ -250,10 +251,36 @@ describe("fortify and card protocol", () => {
     const base = view.game;
     const ok = (fortify: unknown) => gameViewSchema.safeParse({ ...base, fortify }).success;
     expect(ok(null)).toBe(true);
-    expect(ok({ reach: "connected", groups: [["a", "b"]] })).toBe(true);
-    expect(ok({ reach: "adjacent", targets: { a: ["b"] } })).toBe(true);
-    expect(ok({ reach: "teleport", groups: [] })).toBe(false);
-    expect(ok({ reach: "connected", targets: {} })).toBe(false);
+    const moves = { movesDone: 0, movesMax: 1 };
+    expect(ok({ reach: "connected", groups: [["a", "b"]], ...moves })).toBe(true);
+    expect(ok({ reach: "adjacent", targets: { a: ["b"] }, ...moves })).toBe(true);
+    expect(ok({ reach: "teleport", groups: [], ...moves })).toBe(false);
+    expect(ok({ reach: "connected", targets: {}, ...moves })).toBe(false);
+  });
+
+  it("fortify views carry movesDone and movesMax in both variants (1 and 2)", () => {
+    const base = view.game;
+    const parse = (fortify: unknown) => gameViewSchema.safeParse({ ...base, fortify });
+    for (const reach of [
+      { reach: "connected", groups: [] },
+      { reach: "adjacent", targets: {} },
+    ]) {
+      for (const [movesDone, movesMax] of [
+        [0, 1],
+        [0, 2],
+        [1, 2],
+      ]) {
+        expect(parse({ ...reach, movesDone, movesMax }).success, JSON.stringify(reach)).toBe(true);
+      }
+      // both fields are required; the setting is 1 or 2 only
+      expect(parse({ ...reach }).success).toBe(false);
+      expect(parse({ ...reach, movesDone: 0 }).success).toBe(false);
+      expect(parse({ ...reach, movesMax: 1 }).success).toBe(false);
+      for (const movesMax of [0, 3, "2", null, true])
+        expect(parse({ ...reach, movesDone: 0, movesMax }).success, String(movesMax)).toBe(false);
+      for (const movesDone of [-1, 1.5, "0", null])
+        expect(parse({ ...reach, movesDone, movesMax: 2 }).success, String(movesDone)).toBe(false);
+    }
   });
 
   it("strips deck and discard if they ever slipped into a view", () => {
@@ -530,6 +557,11 @@ describe("host protocol (phase 6a)", () => {
       { type: "settings", mapId: "welt", victoryMode: "domination" },
       { type: "settings", mapId: "testland" },
       { type: "settings", victoryMode: "missions" },
+      { type: "settings", fortifyMoves: 1 },
+      { type: "settings", fortifyMoves: 2 },
+      { type: "settings", mapId: "welt", victoryMode: "domination", fortifyMoves: 2 },
+      { type: "settings", mapId: "testland", fortifyMoves: 1 },
+      { type: "settings", victoryMode: "missions", fortifyMoves: 2 },
       { type: "host", reqId: "h1", action: { type: "skipTurn", turn: 12 } },
       { type: "host", action: { type: "removePlayer", playerId: "9a2e" } },
       { type: "host", reqId: "t1", action: { type: "transferHost", playerId: "9a2e" } },
@@ -545,6 +577,14 @@ describe("host protocol (phase 6a)", () => {
       { type: "settings", mapId: "nirgendwo" },
       { type: "settings", victoryMode: "chaos" },
       { type: "settings", mapId: "welt", extra: 1 },
+      { type: "settings", fortifyMoves: 0 },
+      { type: "settings", fortifyMoves: 3 },
+      { type: "settings", fortifyMoves: "2" },
+      { type: "settings", fortifyMoves: true },
+      { type: "settings", fortifyMoves: null },
+      { type: "settings", fortifyMoves: 1.5 },
+      { type: "settings", fortifyMoves: 2, extra: 1 },
+      { type: "settings", mapId: "welt", fortifyMoves: 3 },
       { type: "host", action: { type: "skipTurn" } },
       { type: "host", action: { type: "skipTurn", turn: 0 } },
       { type: "host", action: { type: "skipTurn", turn: 1.5 } },
@@ -621,6 +661,14 @@ describe("host protocol (phase 6a)", () => {
     const playing = snapshots.filter((m) => m.type === "snapshot" && m.view.status === "playing");
     expect(playing.length).toBeGreaterThan(0);
     for (const m of playing) if (m.type === "snapshot") expect(m.view.publicUrl).toBeNull();
+  });
+
+  it("requires fortifyMoves (1 or 2) in the room view", () => {
+    expect(roomViewSchema.safeParse({ ...view, fortifyMoves: 2 }).success).toBe(true);
+    const { fortifyMoves: _f, ...noMoves } = view;
+    expect(roomViewSchema.safeParse(noMoves).success).toBe(false);
+    for (const bad of [0, 3, "2", null, true])
+      expect(roomViewSchema.safeParse({ ...view, fortifyMoves: bad }).success).toBe(false);
   });
 
   it("requires removed, victoryMode and gameNo in the room view", () => {

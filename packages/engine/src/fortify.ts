@@ -74,6 +74,7 @@ export function applyFortify(
   }
   const moved: GameState = {
     ...state,
+    fortifyMovesDone: state.fortifyMovesDone + 1,
     territories: {
       ...state.territories,
       [action.from]: { ...from, armies: from.armies - action.count },
@@ -86,12 +87,17 @@ export function applyFortify(
   // The mover is checked before the turn ends: a win means no turn end, no card draw, no turn change.
   const checked = checkVictory(moved, events);
   if (checked.state.winnerId !== null) return { ok: true, ...checked };
-  return endTurn(checked.state, checked.events, rng);
+  // The last allowed move ends the turn; with setting 2 the first one leaves the player in the fortify phase.
+  if (checked.state.fortifyMovesDone >= state.rules.fortifyMoves) {
+    return endTurn(checked.state, checked.events, rng);
+  }
+  return { ok: true, ...checked };
 }
 
 /** The fortify view for the active player: groups ("connected") or targets per origin ("adjacent"). */
 export function fortifyView(map: MapDefinition, state: GameState, playerId: PlayerId): FortifyView {
   const own = map.territories.filter((t) => state.territories[t.id]?.ownerId === playerId);
+  const moves = { movesDone: state.fortifyMovesDone, movesMax: state.rules.fortifyMoves };
   if (state.rules.fortifyReach === "adjacent") {
     const targets: Record<TerritoryId, TerritoryId[]> = {};
     for (const t of own) {
@@ -99,7 +105,7 @@ export function fortifyView(map: MapDefinition, state: GameState, playerId: Play
       const to = own.filter((o) => t.neighbors.includes(o.id)).map((o) => o.id);
       if (to.length > 0) targets[t.id] = to;
     }
-    return { reach: "adjacent", targets };
+    return { reach: "adjacent", targets, ...moves };
   }
   const groups: TerritoryId[][] = [];
   const done = new Set<TerritoryId>();
@@ -109,5 +115,5 @@ export function fortifyView(map: MapDefinition, state: GameState, playerId: Play
     for (const m of members) done.add(m);
     if (members.size >= 2) groups.push(own.filter((o) => members.has(o.id)).map((o) => o.id));
   }
-  return { reach: "connected", groups };
+  return { reach: "connected", groups, ...moves };
 }

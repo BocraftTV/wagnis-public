@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { mapIdSchema } from "./http.js";
-import { roomViewSchema, victoryModeSchema } from "./view.js";
+import { fortifyMovesSchema, roomViewSchema, victoryModeSchema } from "./view.js";
 
 export const actionSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -58,16 +58,18 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
     reqId: z.string().max(64).optional(),
     action: actionSchema,
   }),
-  /** Host only, lobby only: map and/or victory mode (rules.md 10.1). At least one of the two fields. */
+  /** Host only, lobby only: map, victory mode and/or fortify moves per turn (rules.md 10.1). At least one field. */
   z
     .strictObject({
       type: z.literal("settings"),
       mapId: mapIdSchema.optional(),
       victoryMode: victoryModeSchema.optional(),
+      fortifyMoves: fortifyMovesSchema.optional(),
     })
-    .refine((m) => m.mapId !== undefined || m.victoryMode !== undefined, {
-      message: "settings needs mapId or victoryMode",
-    }),
+    .refine(
+      (m) => m.mapId !== undefined || m.victoryMode !== undefined || m.fortifyMoves !== undefined,
+      { message: "settings needs mapId, victoryMode or fortifyMoves" },
+    ),
   /** Host only (rules.md 1.6): skip a turn, remove a player. */
   z.strictObject({
     type: z.literal("host"),

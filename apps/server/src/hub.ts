@@ -124,6 +124,7 @@ export class Hub {
       })),
       // Lobby: the host's choice (column); running game: the value in its state (the same, fixed at the start)
       victoryMode: state?.rules.victoryMode ?? room.victoryMode,
+      fortifyMoves: state?.rules.fortifyMoves ?? room.fortifyMoves,
       gameNo: room.gameNo,
       // Only the lobby needs the address (QR code); the same for everybody, never a path, room code or token.
       publicUrl: room.status === "lobby" ? (this.publicUrl ?? null) : null,

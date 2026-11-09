@@ -66,6 +66,7 @@ function view(o: {
     you: { playerId: o.me, isHost: players.find((p) => p.id === o.me)!.isHost },
     players,
     victoryMode: "missions",
+    fortifyMoves: 1,
     gameNo: 1,
     publicUrl: null,
     game,

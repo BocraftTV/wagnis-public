@@ -69,9 +69,25 @@ export const tradeRecordSchema = z.object({
   bonusTerritoryId: z.string().nullable(),
 });
 
+/** Fortify moves per turn (rules.md 5.3): the room setting, 1 or 2. */
+export const fortifyMovesSchema = z.union([z.literal(1), z.literal(2)]);
+
+/** `movesDone`: moves already made this turn; `movesMax`: the setting. Only the active player's view has them. */
+const fortifyMovesFields = {
+  movesDone: z.number().int().min(0).max(2),
+  movesMax: fortifyMovesSchema,
+};
 const fortifyViewSchema = z.discriminatedUnion("reach", [
-  z.object({ reach: z.literal("connected"), groups: z.array(z.array(z.string())) }),
-  z.object({ reach: z.literal("adjacent"), targets: z.record(z.string(), z.array(z.string())) }),
+  z.object({
+    reach: z.literal("connected"),
+    groups: z.array(z.array(z.string())),
+    ...fortifyMovesFields,
+  }),
+  z.object({
+    reach: z.literal("adjacent"),
+    targets: z.record(z.string(), z.array(z.string())),
+    ...fortifyMovesFields,
+  }),
 ]);
 
 export const gameViewSchema = z.object({
@@ -152,6 +168,8 @@ export const roomViewSchema = z.object({
   ),
   /** Victory mode of the room: the lobby choice, once the game runs the one in the game state (public, same for all). */
   victoryMode: victoryModeSchema,
+  /** Fortify moves per turn: the lobby choice, once the game runs the one in the game state (public, same for all). */
+  fortifyMoves: fortifyMovesSchema,
   /** Number of the game in this room, from 1; rises with every "back to the lobby" (public). */
   gameNo: z.number().int().min(1),
   /**

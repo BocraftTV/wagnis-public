@@ -43,17 +43,19 @@ describe("Phase-4 states from the real server", () => {
   });
 
   it.each(playing.map((r) => [r.label, r] as const))(
-    "%s: migrates 4 -> 5 on load and keeps accepting actions",
+    "%s: migrates 4 -> 6 on load and keeps accepting actions",
     (_label, r) => {
       const raw = JSON.parse(JSON.stringify(r.room.state_json)) as unknown;
       const loaded = migrateState(raw, noRng);
       expect(loaded.ok).toBe(true);
       if (!loaded.ok) return;
-      // version 4 is no longer current: it goes through 4 -> 5 (plan 007)
+      // version 4 is no longer current: it goes through 4 -> 5 (plan 007) and 5 -> 6 (plan 011)
       expect(loaded.migrated).toBe(true);
       const state: GameState = loaded.state;
       expect(state.stateVersion).toBe(STATE_VERSION);
       expect(state.removedPlayerIds).toEqual([]);
+      expect(state.fortifyMovesDone).toBe(0);
+      expect(state.rules.fortifyMoves).toBe(1);
       expect(state.mapId).toBe("testland");
       // the old state carries its own rules, equal to what testland has today
       expect(state.rules).toEqual(testlandRules);

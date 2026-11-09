@@ -130,7 +130,7 @@ describe.each(["phase3-3p", "phase3-2p"])("Phase-3 fixture %s (question 19)", (n
     expect(text).not.toMatch(/token|createCode|hash/i);
   });
 
-  it("loads through the real load path as domination, v5, written back once", () => {
+  it("loads through the real load path as domination, v6, written back once", () => {
     const text = fixture(name);
     const { ids } = seedRoom(text);
     const store = new Store(dbPath);
@@ -139,7 +139,7 @@ describe.each(["phase3-3p", "phase3-2p"])("Phase-3 fixture %s (question 19)", (n
     expect(first.ok).toBe(true);
     if (!first.ok || !first.state) throw new Error("not loaded");
     const state = first.state;
-    expect(state.stateVersion).toBe(5);
+    expect(state.stateVersion).toBe(6);
     expect(state.removedPlayerIds).toEqual([]);
     expect(state.rules.victoryMode).toBe("domination");
     expect(state.winReason).toBeNull();
@@ -154,7 +154,7 @@ describe.each(["phase3-3p", "phase3-2p"])("Phase-3 fixture %s (question 19)", (n
 
     const written = rawRow();
     expect(JSON.parse(written)).toEqual(JSON.parse(JSON.stringify(state)));
-    expect((JSON.parse(written) as GameState).stateVersion).toBe(5);
+    expect((JSON.parse(written) as GameState).stateVersion).toBe(6);
     // Second load: no further write and no Rng
     const second = loadState(store, store.getRoom(ROOM)!, noRng);
     expect(second.ok && second.state).toEqual(state);
@@ -242,7 +242,7 @@ describe("a stored state with a newer or invalid version (question 19)", () => {
   };
 
   it.each([
-    [6, "STATE_VERSION_UNSUPPORTED", 6],
+    [7, "STATE_VERSION_UNSUPPORTED", 7],
     ["4", "STATE_VERSION_INVALID", null],
     [3.5, "STATE_VERSION_INVALID", 3.5],
   ] as const)(
@@ -259,7 +259,7 @@ describe("a stored state with a newer or invalid version (question 19)", () => {
   );
 
   it("answers hello and actions with STATE_UNSUPPORTED only; the row stays; log and message hold no state data", async () => {
-    const json = withVersion(6);
+    const json = withVersion(7);
     const raw = JSON.parse(json) as GameState;
     const { ids } = seedRoom(json);
     const before = rowDump();

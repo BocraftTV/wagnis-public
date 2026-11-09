@@ -278,9 +278,16 @@ describe("viewFor: phase 3 fields", () => {
         ["eisenfurt", "rabenhain", "tannenfeld"],
         ["salzmoor", "dornental", "nebelkueste"],
       ],
+      movesDone: 0,
+      movesMax: 1,
     });
     const lone = makeState({ phase: "fortify", territories: { eisenfurt: ["a", 3] } });
-    expect(viewFor(lone, "a").fortify).toEqual({ reach: "connected", groups: [] });
+    expect(viewFor(lone, "a").fortify).toEqual({
+      reach: "connected",
+      groups: [],
+      movesDone: 0,
+      movesMax: 1,
+    });
   });
 
   it("adjacent: lists the allowed targets for every origin that can move", () => {
@@ -293,6 +300,8 @@ describe("viewFor: phase 3 fields", () => {
         salzmoor: ["dornental"],
         nebelkueste: ["dornental"],
       },
+      movesDone: 0,
+      movesMax: 1,
     });
   });
 

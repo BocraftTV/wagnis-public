@@ -191,3 +191,26 @@ describe.each([2, 3, 6])("welt, %i players: random games with random host action
     expect(removals).toBeGreaterThan(0);
   });
 });
+
+describe("testland, fortifyMoves 2: random games with random host actions", () => {
+  it("keeps every invariant of rules.md 1.7 after every action; the counter is 0 after a turn change by the host", () => {
+    const rules = { ...testlandRules, fortifyMoves: 2 as const };
+    let skipsAfterFirst = 0;
+    for (const n of [2, 3, 6]) {
+      for (let seed = 1; seed <= 40; seed++) {
+        const { start, steps } = playRandomGame({ seed, players: n, rules, hostRate: 0.08 });
+        check(`${n} players, seed ${seed}`, testland, rules, n, start, steps);
+        for (const step of steps) {
+          if (!step.host) continue;
+          if (step.after.activePlayerId !== step.before.activePlayerId) {
+            expect(step.after.fortifyMovesDone).toBe(0);
+          }
+          if (step.action.type === "skipTurn" && step.before.fortifyMovesDone === 1) {
+            skipsAfterFirst++;
+          }
+        }
+      }
+    }
+    expect(skipsAfterFirst, "skips after the first move exercised").toBeGreaterThan(0);
+  });
+});

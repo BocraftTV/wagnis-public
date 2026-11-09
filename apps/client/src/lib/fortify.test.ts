@@ -27,8 +27,18 @@ const territories: Territories = {
   e: t("me", 2),
 };
 // Deliberately not what the map would give: the client must show exactly what the view says.
-const connected: Fortify = { reach: "connected", groups: [["a", "b", "c"]] };
-const adjacent: Fortify = { reach: "adjacent", targets: { a: ["b"], c: ["a", "b"] } };
+const connected: Fortify = {
+  reach: "connected",
+  groups: [["a", "b", "c"]],
+  movesDone: 0,
+  movesMax: 1,
+};
+const adjacent: Fortify = {
+  reach: "adjacent",
+  targets: { a: ["b"], c: ["a", "b"] },
+  movesDone: 0,
+  movesMax: 1,
+};
 
 describe("fortifyTargets", () => {
   it("takes the group of the origin without the origin itself", () => {
@@ -93,7 +103,12 @@ describe("selection", () => {
       emptySelection,
     );
     expect(
-      pruneFortifySelection(sel, { reach: "adjacent", targets: { a: ["c"] } }, territories, "me"),
+      pruneFortifySelection(
+        sel,
+        { reach: "adjacent", targets: { a: ["c"] }, movesDone: 0, movesMax: 1 },
+        territories,
+        "me",
+      ),
     ).toEqual({
       from: "a",
       to: null,

@@ -12,6 +12,7 @@ const view = (roomId: string, version: number): RoomView => ({
   you: { playerId: "p", isHost: true },
   players: [],
   victoryMode: "missions",
+  fortifyMoves: 1,
   gameNo: 1,
   publicUrl: null,
   game: null,

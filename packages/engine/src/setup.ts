@@ -46,6 +46,8 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
   const owners: Owner[] = n === 2 ? [...playerIds, null] : playerIds;
   if (startArmies < Math.ceil(map.territories.length / owners.length))
     return { ok: false, code: "INVALID_RULES" };
+  if (rules.fortifyMoves !== 1 && rules.fortifyMoves !== 2)
+    return { ok: false, code: "INVALID_RULES" };
   // Below 5 cards a hand can lack a valid set, so a mandatory trade could get stuck (rules.md 6).
   if (!Number.isInteger(rules.cards.mustTradeAt) || rules.cards.mustTradeAt < 5)
     return { ok: false, code: "INVALID_RULES" };
@@ -109,6 +111,7 @@ export function createGame({ map, rules, playerIds, rng, missions }: CreateGameI
     },
     pendingOccupation: null,
     conqueredThisTurn: false,
+    fortifyMovesDone: 0,
     winnerId: null,
     winReason: null,
     removedPlayerIds: [],

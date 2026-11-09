@@ -59,6 +59,8 @@ export interface RuleConfig {
   initialPlacement: "auto" | "manual";
   /** `connected`: any chain of own territories; `adjacent`: direct neighbours only. */
   fortifyReach: "connected" | "adjacent";
+  /** Fortify moves per turn: 1 ends the turn after the first, 2 allows up to two (rules.md 5.3). Lobby choice of the host. */
+  fortifyMoves: 1 | 2;
   cards: CardRules;
   /** `"missions"` (default): secret missions; `"domination"`: no missions, the last player wins. */
   victoryMode: VictoryMode;
@@ -101,6 +103,8 @@ export interface GameState {
   pendingOccupation: PendingOccupation | null;
   /** At least one territory was conquered this turn; reset at turn start. */
   conqueredThisTurn: boolean;
+  /** Accepted fortify moves in the current turn; reset at every turn change (rules.md 5.3). Internal, never in a view. */
+  fortifyMovesDone: number;
   /** Set as soon as someone wins (rules.md 1.2). */
   winnerId: PlayerId | null;
   /** Set together with `winnerId`. */
@@ -307,11 +311,24 @@ export interface TerritoryView extends TerritoryState {
 /**
  * What the active player may highlight in the fortify phase; the client works out no reachability.
  * `connected`: groups of linked own territories (only groups of 2 or more). `adjacent`: for every own
- * territory that can move, its allowed targets.
+ * territory that can move, its allowed targets. `movesDone` and `movesMax` tell how many moves this turn has seen
+ * and allows (the client shows "move 1 of 2" only when `movesMax` is 2).
  */
 export type FortifyView =
-  | { reach: "connected"; groups: TerritoryId[][] }
-  | { reach: "adjacent"; targets: Record<TerritoryId, TerritoryId[]> };
+  | {
+      reach: "connected";
+      groups: TerritoryId[][];
+      /** Fortify moves already made in this turn: 0 with setting 1, 0 or 1 with setting 2. */
+      movesDone: number;
+      /** The room setting `rules.fortifyMoves` (1 or 2). */
+      movesMax: 1 | 2;
+    }
+  | {
+      reach: "adjacent";
+      targets: Record<TerritoryId, TerritoryId[]>;
+      movesDone: number;
+      movesMax: 1 | 2;
+    };
 
 /** A card in the owner's own hand. `bonusEligible` is a selection aid only; the engine checks the trade. */
 export interface HandCard extends Card {

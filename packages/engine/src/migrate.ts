@@ -1,5 +1,5 @@
 import { normalizeState } from "./normalize.js";
-import type { GameStateV3, GameStateV4 } from "./normalize.js";
+import type { GameStateV3, GameStateV4, GameStateV5 } from "./normalize.js";
 import { STATE_VERSION } from "./state-version.js";
 import type { GameState, MigrateErrorCode, Rng } from "./types.js";
 
@@ -34,8 +34,22 @@ export function migrate3to4(state: GameStateV3): GameStateV4 {
  * 4 -> 5 (phase 6a): nobody has been removed by a host yet (rules.md 1.5, 1.6). Builds a new object; the input is
  * not touched, no `Rng`.
  */
-export function migrate4to5(state: GameStateV4): GameState {
+export function migrate4to5(state: GameStateV4): GameStateV5 {
   return { ...state, removedPlayerIds: [], stateVersion: 5 };
+}
+
+/**
+ * 5 -> 6 (plan 011): every stored game was started with one fortify move per turn, so it goes on with
+ * `fortifyMoves: 1`; the counter is 0 because under the old rules the first move already ended the turn (rules.md
+ * 1.5, 5.3). Builds a new object; the input is not touched, no `Rng`.
+ */
+export function migrate5to6(state: GameStateV5): GameState {
+  return {
+    ...state,
+    rules: { ...state.rules, fortifyMoves: 1 },
+    fortifyMovesDone: 0,
+    stateVersion: 6,
+  };
 }
 
 /**
@@ -45,6 +59,7 @@ export function migrate4to5(state: GameStateV4): GameState {
 const MIGRATIONS: Record<number, (state: never) => unknown> = {
   3: migrate3to4,
   4: migrate4to5,
+  5: migrate5to6,
 };
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>

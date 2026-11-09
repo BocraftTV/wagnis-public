@@ -229,7 +229,12 @@ describe("neutral owner in the other actions", () => {
       "NOT_CONNECTED",
     );
     const view = viewFor(cut, "a");
-    expect(view.fortify).toEqual({ reach: "connected", groups: [] });
+    expect(view.fortify).toEqual({
+      reach: "connected",
+      groups: [],
+      movesDone: 0,
+      movesMax: 1,
+    });
   });
 
   it("neutral territories get no reinforcements and complete no continent", () => {

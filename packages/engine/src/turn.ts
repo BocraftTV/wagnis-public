@@ -40,6 +40,7 @@ export function endTurn(state: GameState, events: GameEvent[], rng: Rng): Action
     turn,
     reinforcementsLeft: reinforcements,
     conqueredThisTurn: false,
+    fortifyMovesDone: 0,
     lastCombat: null, // combatSeq stays, so seq never jumps back
     lastTrade: null, // same for tradeSeq
   };

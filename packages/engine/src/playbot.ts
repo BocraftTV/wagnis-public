@@ -97,13 +97,28 @@ export function chooseAction(
     }
     return { type: "endPhase" };
   }
-  const groups = view.fortify?.reach === "connected" ? view.fortify.groups : [];
-  const movers = groups.flatMap((g) => g.filter((id) => state.territories[id]!.armies > 1));
-  if (movers.length > 0 && bot.int(2) === 0) {
-    const from = pick(movers);
-    const group = groups.find((g) => g.includes(from))!;
-    const to = pick(group.filter((id) => id !== from));
-    return { type: "fortify", from, to, count: 1 + bot.int(state.territories[from]!.armies - 1) };
+  // Origins and targets come from the view; with setting 2 the bot may fortify again after the first move.
+  const fortify = view.fortify;
+  const options: { from: string; to: string[] }[] = [];
+  if (fortify?.reach === "connected") {
+    for (const group of fortify.groups) {
+      for (const from of group) {
+        if (state.territories[from]!.armies > 1) {
+          options.push({ from, to: group.filter((id) => id !== from) });
+        }
+      }
+    }
+  } else if (fortify?.reach === "adjacent") {
+    for (const [from, to] of Object.entries(fortify.targets)) options.push({ from, to });
+  }
+  if (options.length > 0 && bot.int(2) === 0) {
+    const { from, to } = pick(options);
+    return {
+      type: "fortify",
+      from,
+      to: pick(to),
+      count: 1 + bot.int(state.territories[from]!.armies - 1),
+    };
   }
   return { type: "endPhase" };
 }

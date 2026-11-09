@@ -72,6 +72,7 @@ const snapshot = (version: number) => ({
     you: { playerId: "p1", isHost: true },
     players: [{ id: "p1", name: "A", seat: 0, isHost: true, connected: true, removed: false }],
     victoryMode: "missions",
+    fortifyMoves: 1,
     gameNo: 1,
     publicUrl: null,
     game: null,

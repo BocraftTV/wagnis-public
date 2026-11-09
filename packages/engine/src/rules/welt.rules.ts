@@ -1,5 +1,5 @@
 import type { RuleConfig } from "../types.js";
-import { defaultCardRules, defaultFortifyReach } from "./defaults.js";
+import { defaultCardRules, defaultFortifyMoves, defaultFortifyReach } from "./defaults.js";
 
 /**
  * Rule values of the world map (42 territories). 2 players are dealt 14 territories each plus 14 neutral ones;
@@ -11,6 +11,7 @@ export const weltRules: RuleConfig = {
   territoryDivisor: 3,
   initialPlacement: "auto",
   fortifyReach: defaultFortifyReach,
+  fortifyMoves: defaultFortifyMoves,
   cards: defaultCardRules,
   victoryMode: "missions",
 };

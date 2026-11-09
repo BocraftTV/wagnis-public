@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
+import { defaultFortifyMoves } from "@wagnis/engine";
 import type { GameState } from "@wagnis/engine";
 import { MAX_PLAYERS } from "@wagnis/shared";
 import type { MapId, RoomStatus } from "@wagnis/shared";
@@ -14,6 +15,8 @@ export interface RoomRow {
   mapId: MapId;
   /** Victory mode chosen in the lobby; a running game uses the one in its state. */
   victoryMode: VictoryMode;
+  /** Fortify moves per turn chosen in the lobby (1 or 2); a running game uses the one in its state. */
+  fortifyMoves: 1 | 2;
   /** Number of the game in this room, from 1; rises with every "back to the lobby". */
   gameNo: number;
   stateJson: string | null;
@@ -50,7 +53,8 @@ CREATE TABLE IF NOT EXISTS rooms (
   updated_at INTEGER NOT NULL,
   victory_mode TEXT NOT NULL DEFAULT 'missions',
   game_no INTEGER NOT NULL DEFAULT 1,
-  last_activity_at INTEGER NOT NULL DEFAULT 0
+  last_activity_at INTEGER NOT NULL DEFAULT 0,
+  fortify_moves INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
@@ -66,7 +70,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS players_room_name ON players (room_id, lower(n
 CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
 `;
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 export class Store {
   private readonly db: Database.Database;
@@ -86,7 +90,8 @@ export class Store {
    * played on). Version 3 (phase 6a) adds `rooms.victory_mode` (old rows: `missions`, the default every room
    * started with), `rooms.game_no` (1), `rooms.last_activity_at` (filled once from `updated_at`) and
    * `players.removed` (0). All in one transaction; rows are not rewritten otherwise, and opening an up-to-date
-   * database changes nothing.
+   * database changes nothing. Version 4 (plan 011) adds `rooms.fortify_moves` (old rows: 1, the one fortify move per
+   * turn every room had until then).
    */
   private upgrade(): void {
     const has = (table: string, column: string): boolean =>
@@ -105,6 +110,9 @@ export class Store {
     if (!has("rooms", "last_activity_at")) {
       this.db.exec("ALTER TABLE rooms ADD COLUMN last_activity_at INTEGER NOT NULL DEFAULT 0");
       this.db.exec("UPDATE rooms SET last_activity_at = updated_at");
+    }
+    if (!has("rooms", "fortify_moves")) {
+      this.db.exec("ALTER TABLE rooms ADD COLUMN fortify_moves INTEGER NOT NULL DEFAULT 1");
     }
     if (!has("players", "removed")) {
       this.db.exec("ALTER TABLE players ADD COLUMN removed INTEGER NOT NULL DEFAULT 0");
@@ -135,6 +143,7 @@ export class Store {
       status: r["status"] as RoomStatus,
       mapId: r["map_id"] as MapId,
       victoryMode: r["victory_mode"] as VictoryMode,
+      fortifyMoves: r["fortify_moves"] as 1 | 2,
       gameNo: r["game_no"] as number,
       stateJson: r["state_json"] as string | null,
       version: r["version"] as number,
@@ -168,9 +177,9 @@ export class Store {
     this.db.transaction(() => {
       this.db
         .prepare(
-          "INSERT INTO rooms (id, status, state_json, map_id, version, created_at, updated_at, last_activity_at) VALUES (?, 'lobby', NULL, ?, 0, ?, ?, ?)",
+          "INSERT INTO rooms (id, status, state_json, map_id, version, created_at, updated_at, last_activity_at, fortify_moves) VALUES (?, 'lobby', NULL, ?, 0, ?, ?, ?, ?)",
         )
-        .run(roomId, mapId, now, now, now);
+        .run(roomId, mapId, now, now, now, defaultFortifyMoves);
       this.db
         .prepare(
           "INSERT INTO players (id, room_id, name, token_hash, seat, is_host) VALUES (?, ?, ?, ?, 0, 1)",
@@ -289,10 +298,14 @@ export class Store {
     this.db.prepare("UPDATE rooms SET last_activity_at = ? WHERE id = ?").run(now, roomId);
   }
 
-  /** Lobby choice of map and/or victory mode. Returns false unless the room is in the lobby. */
+  /** Lobby choice of map, victory mode and/or fortify moves. Returns false unless the room is in the lobby. */
   setSettings(
     roomId: string,
-    patch: { mapId?: MapId | undefined; victoryMode?: VictoryMode | undefined },
+    patch: {
+      mapId?: MapId | undefined;
+      victoryMode?: VictoryMode | undefined;
+      fortifyMoves?: 1 | 2 | undefined;
+    },
     now: number,
   ): boolean {
     return this.db.transaction((): boolean => {
@@ -303,6 +316,10 @@ export class Store {
         this.db
           .prepare("UPDATE rooms SET victory_mode = ? WHERE id = ?")
           .run(patch.victoryMode, roomId);
+      if (patch.fortifyMoves !== undefined)
+        this.db
+          .prepare("UPDATE rooms SET fortify_moves = ? WHERE id = ?")
+          .run(patch.fortifyMoves, roomId);
       this.db
         .prepare(
           "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",

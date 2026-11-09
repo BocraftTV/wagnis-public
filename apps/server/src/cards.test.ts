@@ -124,6 +124,8 @@ describe("fortify over the wire", () => {
     expect(view.game!.fortify).toEqual({
       reach: "connected",
       groups: [["eisenfurt", "rabenhain", "tannenfeld"]],
+      movesDone: 0,
+      movesMax: 1,
     });
     expect((await c["guest"]!.latestView()).game!.fortify).toBeNull();
     const before = view.version;

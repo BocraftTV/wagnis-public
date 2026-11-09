@@ -276,6 +276,7 @@ describe("the shape of state and view is pinned (no extra self-target field)", (
         "activePlayerId",
         "combatSeq",
         "conqueredThisTurn",
+        "fortifyMovesDone",
         "lastCombat",
         "lastTrade",
         "mapId",

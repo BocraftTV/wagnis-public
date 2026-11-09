@@ -29,7 +29,7 @@ Codes: `VALIDATION` 400, `BAD_CREATE_CODE` 403, `ROOM_NOT_FOUND` 404, `NOT_FOUND
 
 `mapId` ist optional und legt die Karte des Raums fest: `"welt"` (Standard, 42 Gebiete) oder `"testland"` (kleine
 Testkarte, 8 Gebiete). Eine andere ID ergibt `VALIDATION`. Das ist der Anfangswert: Der Host darf Karte und Siegmodus in der
-Lobby per `settings` ändern. Räume, die vor Phase 5 angelegt wurden, laufen auf `testland`.
+Lobby per `settings` ändern (dazu die Verschiebungen pro Zug, Standard 1). Räume, die vor Phase 5 angelegt wurden, laufen auf `testland`.
 
 `201`:
 
@@ -64,6 +64,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
 { "type": "hello", "roomId": "K7M2XQ", "token": "<playerToken>" }
 { "type": "start" }
 { "type": "settings", "mapId": "welt", "victoryMode": "domination" }
+{ "type": "settings", "fortifyMoves": 2 }
 { "type": "host", "reqId": "h1", "action": { "type": "skipTurn", "turn": 12 } }
 { "type": "host", "reqId": "h2", "action": { "type": "removePlayer", "playerId": "9a2e…" } }
 { "type": "host", "reqId": "h3", "action": { "type": "transferHost", "playerId": "9a2e…" } }
@@ -81,9 +82,11 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
 - `hello` muss die erste Nachricht sein und binnen 5 s eintreffen, sonst (oder bei falschem Token/Raum)
   schließt der Server mit Code 4001.
 - `start`: nur Host, nur in der Lobby, ab 2 Spielern. Karte und Siegmodus kommen aus dem Raum (siehe `settings`).
-- `settings` (Phase 6a): nur Host, nur in der Lobby. Mindestens eines der Felder `mapId` (`"welt"` | `"testland"`) und
-  `victoryMode` (`"missions"` | `"domination"`), sonst `BAD_MESSAGE`; unbekannte Werte und zusätzliche Felder ebenso. Jede
-  Änderung erhöht `version` und geht als Snapshot an alle.
+- `settings` (Phase 6a, Plan 011): nur Host, nur in der Lobby. Mindestens eines der Felder `mapId` (`"welt"` | `"testland"`),
+  `victoryMode` (`"missions"` | `"domination"`) und `fortifyMoves` (`1` | `2`, Verschiebungen pro Zug), sonst `BAD_MESSAGE`;
+  unbekannte Werte (z. B. `0`, `3`, `"2"`, `true`) und zusätzliche Felder ebenso. Jede Änderung erhöht `version` und geht als
+  Snapshot an alle. In einer laufenden oder beendeten Partie ändert sich die Einstellung nie (`NOT_IN_LOBBY`); nach
+  `backToLobby` darf der Host sie wieder ändern.
 - `host` (Phase 6a): nur Host. `action` ist `skipTurn` (`turn` ganzzahlig ≥ 1, muss die aktuelle `game.turn` sein, sonst
   `STALE_TURN`; der Zug des aktiven Spielers endet, `docs/rules.md` 1.6) oder `removePlayer` (`playerId`, 1–64 Zeichen;
   in der Lobby wird der Sitz freigegeben, im Spiel werden die Gebiete neutral). Der Host kann sich nicht selbst entfernen
@@ -105,8 +108,9 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
   ganzzahlig ≥ 1. `count` ist die **Gesamtzahl** nachgezogener Armeen (mindestens die Würfel des Siegwurfs,
   höchstens alle bis auf 1). Der Server würfelt; Würfel und Ausgang stehen im Snapshot (`lastCombat`).
 - Verschieben und Karten (nur Formprüfung im Schema, die Regeln prüft die Engine): `fortify` mit `from`, `to`
-  (nicht leere Strings) und `count` ganzzahlig ≥ 1; die Verschiebung beendet den Zug (`NOT_YOUR_TURN` bei einer
-  zweiten). `tradeCards` mit `cardIds` (genau 3 nicht leere Strings) und optionalem `bonusTerritoryId`; eine
+  (nicht leere Strings) und `count` ganzzahlig ≥ 1; je nach Raumeinstellung `fortifyMoves` ist es eine Verschiebung pro Zug
+  (sie beendet den Zug) oder sind es bis zu zwei (nach der ersten bleibt der Spieler am Zug, `endPhase` beendet ihn); nach der
+  letzten erlaubten Verschiebung endet der Zug, eine weitere gibt `NOT_YOUR_TURN`. `tradeCards` mit `cardIds` (genau 3 nicht leere Strings) und optionalem `bonusTerritoryId`; eine
   Action tauscht genau einen Satz. Ohne `bonusTerritoryId` nimmt die Engine das erste passende Gebiet in der
   Reihenfolge von `cardIds`. Karten-IDs stehen in Nachrichten nur in der eigenen Hand, in `suggestedSets` und in
   `lastTrade` (die getauschten Karten sind öffentlich), sonst nie; auch Stapel und Ablagestapel verlassen den
@@ -128,6 +132,7 @@ JSON-Nachrichten, höchstens 16 KB. Das Token steht nie in der URL.
       { "id": "9a2e…", "name": "Ben", "seat": 1, "isHost": false, "connected": false, "removed": false }
     ],
     "victoryMode": "missions",
+    "fortifyMoves": 1,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -200,6 +205,7 @@ Ausschnitt eines Snapshots für den aktiven Spieler in der Verstärkungsphase mi
       }
     ],
     "victoryMode": "missions",
+    "fortifyMoves": 1,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -324,6 +330,7 @@ Snapshot in einer laufenden Partie mit einem entfernten Spieler (Cleo, Phase 6a;
       }
     ],
     "victoryMode": "missions",
+    "fortifyMoves": 1,
     "gameNo": 1,
     "publicUrl": null,
     "game": {
@@ -393,6 +400,7 @@ ist als entfernte Spielerin aus der Liste verschwunden):
       }
     ],
     "victoryMode": "domination",
+    "fortifyMoves": 2,
     "gameNo": 2,
     "publicUrl": "http://192.0.2.10:3000",
     "game": null
@@ -405,6 +413,8 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   Spielzustands; steht außerdem in `game.victoryMode`), `gameNo` (Partienummer im Raum ab 1, steigt bei jedem „Zurück zur
   Lobby“; der Client setzt damit seine Gesehen-Merker zurück) und `game.removedPlayerIds` (Reihenfolge des Entfernens).
   Tokens, Hashes, Gründe und Zeitstempel der Aktivität stehen in keinem Snapshot.
+- Plan 011, `fortifyMoves` (öffentlich, für alle gleich, `1` oder `2`): Verschiebungen pro Zug; in der Lobby die Wahl des Hosts
+  (Standard `1`), im Spiel der Wert des Spielstands (`rules.fortifyMoves`).
 - Phase 6b, `publicUrl` (öffentlich, für alle gleich): der Ursprung aus der optionalen Umgebungsvariable `WAGNIS_PUBLIC_URL`
   (Schema, Host, Port; nie Pfad, Raumcode, Token oder Zugangsdaten; der Server prüft und normalisiert ihn beim Start). Der Wert
   steht nur im Raumstatus `lobby`, damit der Client den QR-Code bauen kann (er hängt `/r/<Raumcode>` selbst an); im Spiel und
@@ -436,7 +446,10 @@ ist als entfernte Spielerin aus der Liste verschwunden):
   - `fortify`: nur für den aktiven Spieler in der Phase `fortify`, sonst `null`. Bei `fortifyReach`
     `"connected"` `{ "reach": "connected", "groups": [[Gebiets-IDs]] }` (Gruppen verbundener eigener Gebiete,
     nur Gruppen mit mindestens 2 Gebieten), bei `"adjacent"` `{ "reach": "adjacent", "targets": { Herkunft: [Ziele] } }`
-    (nur Herkunftsgebiete mit mindestens 2 Armeen und mindestens einem Ziel). Der Client hebt nur hervor.
+    (nur Herkunftsgebiete mit mindestens 2 Armeen und mindestens einem Ziel). Der Client hebt nur hervor. In beiden Varianten
+    stehen außerdem `movesDone` (bisher angenommene Verschiebungen in diesem Zug: bei Einstellung 1 immer `0`, bei 2 `0` oder
+    `1`) und `movesMax` (die Raumeinstellung, `1` oder `2`), z. B. `{ "reach": "connected", "groups": [[…]], "movesDone": 1,
+"movesMax": 2 }`. Nur der aktive Spieler sieht sie; der interne Zähler des Spielstands steht in keiner Nachricht.
   - `lastTrade` (öffentlich): `null` oder der letzte Tausch `{ seq, playerId, cards, armies, bonusTerritoryId }`
     mit den drei abgelegten Karten (`{ id, kind, territoryId }`). Wie `lastCombat`: `seq` springt nie zurück,
     das Feld bleibt stehen, bis der nächste Tausch es ersetzt, und wird beim Zugwechsel `null`.

@@ -13,6 +13,8 @@ export interface StateSpec {
   phase?: Phase | undefined;
   active?: PlayerId | undefined;
   overrides?: Partial<GameState> | undefined;
+  /** Fortify moves per turn (rules.md 5.3); defaults to 1. */
+  fortifyMoves?: 1 | 2 | undefined;
 }
 
 /** Hand-built testland state for rule tests: attack phase, first player active. */
@@ -26,7 +28,10 @@ export function makeState(spec: StateSpec): GameState {
   }
   return {
     mapId: testland.id,
-    rules: testlandRules,
+    rules:
+      spec.fortifyMoves === undefined
+        ? testlandRules
+        : { ...testlandRules, fortifyMoves: spec.fortifyMoves },
     playerOrder: players,
     activePlayerId: spec.active ?? players[0]!,
     phase: spec.phase ?? "attack",
@@ -43,6 +48,7 @@ export function makeState(spec: StateSpec): GameState {
     },
     pendingOccupation: null,
     conqueredThisTurn: false,
+    fortifyMovesDone: 0,
     winnerId: null,
     winReason: null,
     removedPlayerIds: [],
