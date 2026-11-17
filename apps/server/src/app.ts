@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
-import type { FastifyInstance, FastifyRequest, FastifyServerOptions } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest, FastifyServerOptions } from "fastify";
 import type { Rng } from "@wagnis/engine";
 import {
   createRoomRequestSchema,
@@ -71,6 +71,12 @@ const MESSAGES: Record<HttpErrorCode, string> = {
   INTERNAL: "Internal error.",
 };
 
+const httpError = (code: HttpErrorCode): HttpError => ({
+  error: { code, message: MESSAGES[code] },
+});
+const reject = (reply: FastifyReply, code: HttpErrorCode) =>
+  reply.code(STATUS[code]).send(httpError(code) satisfies HttpError);
+
 export async function buildApp(
   options: AppOptions,
 ): Promise<{ app: FastifyInstance; store: Store; hub: Hub }> {
@@ -85,6 +91,43 @@ export async function buildApp(
   const app = Fastify({ logger: options.logger ?? false, bodyLimit: 4096 });
   const hub = new Hub(store, app.log, config.publicUrl);
 
+  startBackgroundTasks(app, { store, hub, now, limiters: [createLimiter, joinLimiter], options });
+  registerHttpRoutes(app, { store, hub, now, config, createLimiter, joinLimiter });
+  await registerWebSocket(app, {
+    store,
+    hub,
+    rng,
+    now,
+    joinLimiter,
+    trustProxyHeader: config.trustProxyHeader,
+    helloTimeoutMs: options.helloTimeoutMs ?? 5000,
+    heartbeatIntervalMs: options.heartbeatIntervalMs ?? 25_000,
+  });
+  await registerClient(
+    app,
+    options.clientDist === undefined ? defaultClientDist : options.clientDist,
+  );
+
+  await app.ready();
+  return { app, store, hub };
+}
+
+/**
+ * The limiter cleanup every minute and the room sweeper (first sweep right now, before the first request, then
+ * hourly; only the number of deleted rooms is logged). On close: no more outgoing traffic, then the timers stop and
+ * the database closes.
+ */
+function startBackgroundTasks(
+  app: FastifyInstance,
+  deps: {
+    store: Store;
+    hub: Hub;
+    now: () => number;
+    limiters: FailureLimiter[];
+    options: AppOptions;
+  },
+): void {
+  const { store, hub, now, limiters, options } = deps;
   app.addHook("preClose", async () => {
     hub.shutdown();
   });
@@ -94,12 +137,9 @@ export async function buildApp(
     store.close();
   });
   const cleanup = setInterval(() => {
-    createLimiter.cleanup();
-    joinLimiter.cleanup();
+    for (const limiter of limiters) limiter.cleanup();
   }, 60_000);
   cleanup.unref();
-
-  // First sweep right now (before the first request), then hourly; only the number of deleted rooms is logged
   const sweeper = startSweeper({
     store,
     hub,
@@ -108,14 +148,22 @@ export async function buildApp(
     intervalMs: options.sweepIntervalMs ?? SWEEP_INTERVAL_MS,
     onSwept: (deleted) => app.log.info({ deleted }, "idle rooms removed"),
   });
+}
 
+/** Headers, the error answer, `/healthz` and the two room routes (create and join). */
+function registerHttpRoutes(
+  app: FastifyInstance,
+  deps: {
+    store: Store;
+    hub: Hub;
+    now: () => number;
+    config: Config;
+    createLimiter: FailureLimiter;
+    joinLimiter: FailureLimiter;
+  },
+): void {
+  const { store, hub, now, config, createLimiter, joinLimiter } = deps;
   const ipOf = (req: FastifyRequest) => clientIp(req.headers, req.ip, config.trustProxyHeader);
-  const httpError = (code: HttpErrorCode): HttpError & { status: number } => ({
-    status: STATUS[code],
-    error: { code, message: MESSAGES[code] },
-  });
-  const reject = (reply: import("fastify").FastifyReply, code: HttpErrorCode) =>
-    reply.code(STATUS[code]).send({ error: httpError(code).error } satisfies HttpError);
 
   app.addHook("onRequest", async (req, reply) => {
     reply.header("X-Robots-Tag", "noindex");
@@ -178,19 +226,13 @@ export async function buildApp(
     hub.broadcast(roomId);
     return reply.send({ playerId, playerToken: token } satisfies JoinResponse);
   });
+}
 
-  await registerWebSocket(app, {
-    store,
-    hub,
-    rng,
-    now,
-    joinLimiter,
-    trustProxyHeader: config.trustProxyHeader,
-    helloTimeoutMs: options.helloTimeoutMs ?? 5000,
-    heartbeatIntervalMs: options.heartbeatIntervalMs ?? 25_000,
-  });
-
-  const clientDist = options.clientDist === undefined ? defaultClientDist : options.clientDist;
+/**
+ * The built client (if there is one): files with long caching for `/assets/`, and `index.html` for every other GET
+ * that is no API path and no file (the SPA routes). Everything else unknown is `NOT_FOUND`.
+ */
+async function registerClient(app: FastifyInstance, clientDist: string | null): Promise<void> {
   const serveClient = clientDist !== null && existsSync(clientDist);
   if (serveClient) {
     await app.register(fastifyStatic, {
@@ -213,7 +255,4 @@ export async function buildApp(
     }
     return reject(reply, "NOT_FOUND");
   });
-
-  await app.ready();
-  return { app, store, hub };
 }

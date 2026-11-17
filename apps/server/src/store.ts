@@ -36,6 +36,32 @@ export interface RoomRow {
   lastActivityAt: number;
 }
 
+/** The settings of the lobby that are rules of the game: everything the host chooses except the map. */
+export const RULE_SETTINGS = [
+  "victoryMode",
+  "fortifyMoves",
+  "missionDraft",
+  "holdToWin",
+  "roundLimit",
+  "worldEvents",
+  "teams",
+] as const;
+export type RuleSettings = Pick<RoomRow, (typeof RULE_SETTINGS)[number]>;
+/** Everything the host chooses in the lobby (message `settings`); one type for the store, the socket and the start. */
+export type LobbySettings = Pick<RoomRow, "mapId"> & RuleSettings;
+
+/**
+ * The rule settings: per field the value of `rules` (a running game) or else of `fallback` (the lobby choice).
+ */
+export function pickRuleSettings(
+  fallback: RuleSettings,
+  rules?: RuleSettings | undefined,
+): RuleSettings {
+  return Object.fromEntries(
+    RULE_SETTINGS.map((k) => [k, rules?.[k] ?? fallback[k]]),
+  ) as RuleSettings;
+}
+
 export interface PlayerRow {
   id: string;
   roomId: string;
@@ -89,6 +115,77 @@ CREATE TABLE IF NOT EXISTS schema_meta (version INTEGER NOT NULL);
 
 const SCHEMA_VERSION = 8;
 
+/**
+ * Columns added after the first schema, in the order `upgrade` adds them to an older database: table, column, type
+ * and default, and an optional statement that fills the new column once.
+ */
+const UPGRADE_COLUMNS: [table: string, column: string, type: string, fill?: string][] = [
+  ["rooms", "map_id", "TEXT NOT NULL DEFAULT 'testland'"],
+  ["rooms", "victory_mode", "TEXT NOT NULL DEFAULT 'missions'"],
+  ["rooms", "game_no", "INTEGER NOT NULL DEFAULT 1"],
+  [
+    "rooms",
+    "last_activity_at",
+    "INTEGER NOT NULL DEFAULT 0",
+    "UPDATE rooms SET last_activity_at = updated_at",
+  ],
+  ["rooms", "fortify_moves", "INTEGER NOT NULL DEFAULT 1"],
+  ["rooms", "mission_draft", "INTEGER NOT NULL DEFAULT 0"],
+  ["rooms", "hold_to_win", "INTEGER NOT NULL DEFAULT 0"],
+  ["rooms", "round_limit", "INTEGER"],
+  ["rooms", "world_events", "INTEGER NOT NULL DEFAULT 0"],
+  ["rooms", "teams", "TEXT"],
+  ["players", "team", "TEXT"],
+  ["players", "removed", "INTEGER NOT NULL DEFAULT 0"],
+];
+
+/** Lobby settings with their column; booleans are stored as 0/1. The team layout is a case of its own. */
+const SETTING_COLUMNS: { key: Exclude<keyof LobbySettings, "teams">; column: string }[] = [
+  { key: "mapId", column: "map_id" },
+  { key: "victoryMode", column: "victory_mode" },
+  { key: "fortifyMoves", column: "fortify_moves" },
+  { key: "missionDraft", column: "mission_draft" },
+  { key: "holdToWin", column: "hold_to_win" },
+  { key: "roundLimit", column: "round_limit" },
+  { key: "worldEvents", column: "world_events" },
+];
+
+const toDb = (value: unknown): unknown => (typeof value === "boolean" ? (value ? 1 : 0) : value);
+
+function roomFromRow(r: Record<string, unknown>): RoomRow {
+  return {
+    id: r["id"] as string,
+    status: r["status"] as RoomStatus,
+    mapId: r["map_id"] as MapId,
+    victoryMode: r["victory_mode"] as VictoryMode,
+    fortifyMoves: r["fortify_moves"] as 1 | 2,
+    missionDraft: r["mission_draft"] === 1,
+    holdToWin: r["hold_to_win"] === 1,
+    roundLimit: (r["round_limit"] as RoundLimit | null | undefined) ?? null,
+    worldEvents: r["world_events"] === 1,
+    teams: (r["teams"] as TeamMode | null | undefined) ?? null,
+    gameNo: r["game_no"] as number,
+    stateJson: r["state_json"] as string | null,
+    version: r["version"] as number,
+    createdAt: r["created_at"] as number,
+    updatedAt: r["updated_at"] as number,
+    lastActivityAt: r["last_activity_at"] as number,
+  };
+}
+
+function playerFromRow(r: Record<string, unknown>): PlayerRow {
+  return {
+    id: r["id"] as string,
+    roomId: r["room_id"] as string,
+    name: r["name"] as string,
+    tokenHash: r["token_hash"] as string,
+    seat: r["seat"] as number,
+    isHost: r["is_host"] === 1,
+    removed: r["removed"] === 1,
+    team: (r["team"] as TeamId | null | undefined) ?? null,
+  };
+}
+
 export class Store {
   private readonly db: Database.Database;
 
@@ -116,42 +213,10 @@ export class Store {
       (this.db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some(
         (c) => c.name === column,
       );
-    if (!has("rooms", "map_id")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN map_id TEXT NOT NULL DEFAULT 'testland'");
-    }
-    if (!has("rooms", "victory_mode")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN victory_mode TEXT NOT NULL DEFAULT 'missions'");
-    }
-    if (!has("rooms", "game_no")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN game_no INTEGER NOT NULL DEFAULT 1");
-    }
-    if (!has("rooms", "last_activity_at")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN last_activity_at INTEGER NOT NULL DEFAULT 0");
-      this.db.exec("UPDATE rooms SET last_activity_at = updated_at");
-    }
-    if (!has("rooms", "fortify_moves")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN fortify_moves INTEGER NOT NULL DEFAULT 1");
-    }
-    if (!has("rooms", "mission_draft")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN mission_draft INTEGER NOT NULL DEFAULT 0");
-    }
-    if (!has("rooms", "hold_to_win")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN hold_to_win INTEGER NOT NULL DEFAULT 0");
-    }
-    if (!has("rooms", "round_limit")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN round_limit INTEGER");
-    }
-    if (!has("rooms", "world_events")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN world_events INTEGER NOT NULL DEFAULT 0");
-    }
-    if (!has("rooms", "teams")) {
-      this.db.exec("ALTER TABLE rooms ADD COLUMN teams TEXT");
-    }
-    if (!has("players", "team")) {
-      this.db.exec("ALTER TABLE players ADD COLUMN team TEXT");
-    }
-    if (!has("players", "removed")) {
-      this.db.exec("ALTER TABLE players ADD COLUMN removed INTEGER NOT NULL DEFAULT 0");
+    for (const [table, column, type, fill] of UPGRADE_COLUMNS) {
+      if (has(table, column)) continue;
+      this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+      if (fill) this.db.exec(fill);
     }
     if (this.db.prepare("SELECT 1 FROM schema_meta").get() === undefined) {
       this.db.prepare("INSERT INTO schema_meta (version) VALUES (?)").run(SCHEMA_VERSION);
@@ -173,41 +238,23 @@ export class Store {
   getRoom(id: string): RoomRow | undefined {
     const r = this.db.prepare("SELECT * FROM rooms WHERE id = ?").get(id) as
       Record<string, unknown> | undefined;
-    if (!r) return undefined;
-    return {
-      id: r["id"] as string,
-      status: r["status"] as RoomStatus,
-      mapId: r["map_id"] as MapId,
-      victoryMode: r["victory_mode"] as VictoryMode,
-      fortifyMoves: r["fortify_moves"] as 1 | 2,
-      missionDraft: r["mission_draft"] === 1,
-      holdToWin: r["hold_to_win"] === 1,
-      roundLimit: (r["round_limit"] as RoundLimit | null | undefined) ?? null,
-      worldEvents: r["world_events"] === 1,
-      teams: (r["teams"] as TeamMode | null | undefined) ?? null,
-      gameNo: r["game_no"] as number,
-      stateJson: r["state_json"] as string | null,
-      version: r["version"] as number,
-      createdAt: r["created_at"] as number,
-      updatedAt: r["updated_at"] as number,
-      lastActivityAt: r["last_activity_at"] as number,
-    };
+    return r ? roomFromRow(r) : undefined;
   }
 
   getPlayers(roomId: string): PlayerRow[] {
     const rows = this.db
       .prepare("SELECT * FROM players WHERE room_id = ? ORDER BY seat")
       .all(roomId) as Record<string, unknown>[];
-    return rows.map((r) => ({
-      id: r["id"] as string,
-      roomId: r["room_id"] as string,
-      name: r["name"] as string,
-      tokenHash: r["token_hash"] as string,
-      seat: r["seat"] as number,
-      isHost: r["is_host"] === 1,
-      removed: r["removed"] === 1,
-      team: (r["team"] as TeamId | null | undefined) ?? null,
-    }));
+    return rows.map(playerFromRow);
+  }
+
+  /** A change of the room or its players: the version counts up, and it counts as activity. */
+  private bumpVersion(roomId: string, now: number): void {
+    this.db
+      .prepare(
+        "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
+      )
+      .run(now, now, roomId);
   }
 
   createRoom(
@@ -253,11 +300,7 @@ export class Store {
           "INSERT INTO players (id, room_id, name, token_hash, seat, is_host) VALUES (?, ?, ?, ?, ?, 0)",
         )
         .run(player.id, roomId, player.name, player.tokenHash, seat);
-      this.db
-        .prepare(
-          "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
-        )
-        .run(now, now, roomId);
+      this.bumpVersion(roomId, now);
       return { ok: true };
     })();
   }
@@ -325,11 +368,7 @@ export class Store {
         this.db
           .prepare("UPDATE players SET is_host = 1 WHERE id = ? AND room_id = ?")
           .run(toId, roomId);
-        this.db
-          .prepare(
-            "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
-          )
-          .run(now, now, roomId);
+        this.bumpVersion(roomId, now);
         return "OK";
       },
     )();
@@ -340,60 +379,26 @@ export class Store {
     this.db.prepare("UPDATE rooms SET last_activity_at = ? WHERE id = ?").run(now, roomId);
   }
 
-  /** Lobby choice of map, victory mode and/or fortify moves. Returns false unless the room is in the lobby. */
+  /** Lobby choice of the map and the rule settings (only the given ones). Returns false unless the room is in the lobby. */
   setSettings(
     roomId: string,
-    patch: {
-      mapId?: MapId | undefined;
-      victoryMode?: VictoryMode | undefined;
-      fortifyMoves?: 1 | 2 | undefined;
-      missionDraft?: boolean | undefined;
-      holdToWin?: boolean | undefined;
-      roundLimit?: RoundLimit | undefined;
-      worldEvents?: boolean | undefined;
-      teams?: TeamMode | undefined;
-    },
+    patch: { [K in keyof LobbySettings]?: LobbySettings[K] | undefined },
     now: number,
   ): boolean {
     return this.db.transaction((): boolean => {
       const room = this.getRoom(roomId);
       if (room?.status !== "lobby") return false;
-      if (patch.mapId !== undefined)
-        this.db.prepare("UPDATE rooms SET map_id = ? WHERE id = ?").run(patch.mapId, roomId);
-      if (patch.victoryMode !== undefined)
-        this.db
-          .prepare("UPDATE rooms SET victory_mode = ? WHERE id = ?")
-          .run(patch.victoryMode, roomId);
-      if (patch.fortifyMoves !== undefined)
-        this.db
-          .prepare("UPDATE rooms SET fortify_moves = ? WHERE id = ?")
-          .run(patch.fortifyMoves, roomId);
-      if (patch.missionDraft !== undefined)
-        this.db
-          .prepare("UPDATE rooms SET mission_draft = ? WHERE id = ?")
-          .run(patch.missionDraft ? 1 : 0, roomId);
-      if (patch.holdToWin !== undefined)
-        this.db
-          .prepare("UPDATE rooms SET hold_to_win = ? WHERE id = ?")
-          .run(patch.holdToWin ? 1 : 0, roomId);
-      if (patch.roundLimit !== undefined)
-        this.db
-          .prepare("UPDATE rooms SET round_limit = ? WHERE id = ?")
-          .run(patch.roundLimit, roomId);
+      for (const { key, column } of SETTING_COLUMNS) {
+        const value = patch[key];
+        if (value !== undefined)
+          this.db.prepare(`UPDATE rooms SET ${column} = ? WHERE id = ?`).run(toDb(value), roomId);
+      }
       if (patch.teams !== undefined && patch.teams !== room.teams) {
         // A new layout starts without an assignment (the old one would not fit); the same layout keeps it.
         this.db.prepare("UPDATE rooms SET teams = ? WHERE id = ?").run(patch.teams, roomId);
         this.db.prepare("UPDATE players SET team = NULL WHERE room_id = ?").run(roomId);
       }
-      if (patch.worldEvents !== undefined)
-        this.db
-          .prepare("UPDATE rooms SET world_events = ? WHERE id = ?")
-          .run(patch.worldEvents ? 1 : 0, roomId);
-      this.db
-        .prepare(
-          "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
-        )
-        .run(now, now, roomId);
+      this.bumpVersion(roomId, now);
       return true;
     })();
   }
@@ -406,11 +411,7 @@ export class Store {
         .prepare("UPDATE players SET team = ? WHERE id = ? AND room_id = ?")
         .run(team, playerId, roomId);
       if (done.changes === 0) return false;
-      this.db
-        .prepare(
-          "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
-        )
-        .run(now, now, roomId);
+      this.bumpVersion(roomId, now);
       return true;
     })();
   }
@@ -425,11 +426,7 @@ export class Store {
           .prepare("UPDATE players SET team = ? WHERE id = ? AND room_id = ?")
           .run(team, playerId, roomId);
       }
-      this.db
-        .prepare(
-          "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
-        )
-        .run(now, now, roomId);
+      this.bumpVersion(roomId, now);
       return true;
     })();
   }
@@ -442,11 +439,7 @@ export class Store {
         .prepare("DELETE FROM players WHERE id = ? AND room_id = ?")
         .run(playerId, roomId);
       if (gone.changes === 0) return false;
-      this.db
-        .prepare(
-          "UPDATE rooms SET version = version + 1, updated_at = ?, last_activity_at = ? WHERE id = ?",
-        )
-        .run(now, now, roomId);
+      this.bumpVersion(roomId, now);
       return true;
     })();
   }

@@ -1,3 +1,4 @@
+import { maxDiceFor } from "./attack.js";
 import { cardCatalog, findSuggestedSets, mustTrade } from "./cards.js";
 import { fortifyView } from "./fortify.js";
 import { getMap } from "./maps/index.js";
@@ -17,10 +18,9 @@ import type {
   MissionReveal,
   PlayerId,
   SecretView,
+  TerritoryView,
   TradeRecord,
 } from "./types.js";
-
-const maxAttackDice = (armies: number): number => Math.max(0, Math.min(3, armies - 1));
 
 const copyCard = (c: Card): Card => ({ id: c.id, kind: c.kind, territoryId: c.territoryId });
 
@@ -179,71 +179,86 @@ function secretFor(state: GameState, playerId: PlayerId): SecretView {
   };
 }
 
+/**
+ * Fog (plan 014 B, rules.md 12): armies of foreign and neutral territories are secret fields for the round, and so is
+ * everything derived from them.
+ */
+const fogHides = (state: GameState, playerId: PlayerId, ownerId: string | null): boolean =>
+  state.worldEvent?.kind === "fog" && ownerId !== playerId && !areAllies(state, ownerId, playerId);
+
+function territoriesView(state: GameState, playerId: PlayerId): Record<string, TerritoryView> {
+  return Object.fromEntries(
+    Object.entries(state.territories).map(([id, t]) => [
+      id,
+      fogHides(state, playerId, t.ownerId)
+        ? { ownerId: t.ownerId, armies: null, maxAttackDice: null, maxMove: null }
+        : {
+            ownerId: t.ownerId,
+            armies: t.armies,
+            maxAttackDice: maxDiceFor(t.armies),
+            maxMove: Math.max(0, t.armies - 1),
+          },
+    ]),
+  );
+}
+
+/** The open move-in with its range. In the fog another player's shows `max` (the armies behind it), so it goes too. */
+function pendingOccupationView(
+  state: GameState,
+  playerId: PlayerId,
+): GameView["pendingOccupation"] {
+  const pending = state.pendingOccupation;
+  if (!pending || fogHides(state, playerId, state.activePlayerId)) return null;
+  return {
+    from: pending.from,
+    to: pending.to,
+    min: pending.min,
+    max: pending.min + Math.max(0, (state.territories[pending.from]?.armies ?? 1) - 1),
+  };
+}
+
+const worldEventView = (state: GameState): GameView["worldEvent"] =>
+  state.worldEvent
+    ? {
+        kind: state.worldEvent.kind,
+        continentId: state.worldEvent.continentId,
+        playerIds: [...state.worldEvent.playerIds],
+        territoryIds: [...state.worldEvent.territoryIds],
+      }
+    : null;
+
+const teamsView = (state: GameState): GameView["teams"] =>
+  state.teams
+    ? (Object.fromEntries(
+        Object.entries(state.teams).map(([id, ps]) => [id, [...ps]]),
+      ) as NonNullable<GameState["teams"]>)
+    : null;
+
+const teamScoresView = (state: GameState): GameView["teamScores"] =>
+  state.teams && state.winReason === "roundLimit"
+    ? teamScoreboard(state).map((t) => ({ ...t, playerIds: [...t.playerIds] }))
+    : null;
+
 /** The only thing that may leave the server: state as seen by one player. */
 export function viewFor(state: GameState, playerId: PlayerId): GameView {
-  const pending = state.pendingOccupation;
   const map = getMap(state.mapId);
-  // Fog (plan 014 B, rules.md 12): armies of foreign and neutral territories are secret fields for the round, and so is
-  // everything derived from them. The open move-in of another player shows `max` (the armies behind it), so it goes too.
-  const fog = state.worldEvent?.kind === "fog";
-  const hidden = (ownerId: string | null): boolean =>
-    fog && ownerId !== playerId && !areAllies(state, ownerId, playerId);
   return {
     mapId: state.mapId,
     phase: state.phase,
     turn: state.turn,
     round: state.round,
     roundLimit: state.rules.roundLimit,
-    worldEvent: state.worldEvent
-      ? {
-          kind: state.worldEvent.kind,
-          continentId: state.worldEvent.continentId,
-          playerIds: [...state.worldEvent.playerIds],
-          territoryIds: [...state.worldEvent.territoryIds],
-        }
-      : null,
+    worldEvent: worldEventView(state),
     worldEventsLeft: state.secret.eventDeck.length,
-    teams: state.teams
-      ? (Object.fromEntries(
-          Object.entries(state.teams).map(([id, ps]) => [id, [...ps]]),
-        ) as NonNullable<GameState["teams"]>)
-      : null,
+    teams: teamsView(state),
     winnerTeamId: state.winnerTeamId,
-    teamScores:
-      state.teams && state.winReason === "roundLimit"
-        ? teamScoreboard(state).map((t) => ({ ...t, playerIds: [...t.playerIds] }))
-        : null,
+    teamScores: teamScoresView(state),
     activePlayerId: state.activePlayerId,
     playerOrder: [...state.playerOrder],
     removedPlayerIds: [...state.removedPlayerIds],
     reinforcementsLeft: state.reinforcementsLeft,
-    territories: Object.fromEntries(
-      Object.entries(state.territories).map(([id, t]) => [
-        id,
-        hidden(t.ownerId)
-          ? { ownerId: t.ownerId, armies: null, maxAttackDice: null, maxMove: null }
-          : {
-              ownerId: t.ownerId,
-              armies: t.armies,
-              maxAttackDice: maxAttackDice(t.armies),
-              maxMove: Math.max(0, t.armies - 1),
-            },
-      ]),
-    ),
-    pendingOccupation:
-      pending &&
-      !(
-        fog &&
-        playerId !== state.activePlayerId &&
-        !areAllies(state, playerId, state.activePlayerId)
-      )
-        ? {
-            from: pending.from,
-            to: pending.to,
-            min: pending.min,
-            max: pending.min + Math.max(0, (state.territories[pending.from]?.armies ?? 1) - 1),
-          }
-        : null,
+    territories: territoriesView(state, playerId),
+    pendingOccupation: pendingOccupationView(state, playerId),
     conqueredThisTurn: state.conqueredThisTurn,
     conquestsThisTurn: state.conquestsThisTurn,
     victoryPending: state.playerOrder.some(

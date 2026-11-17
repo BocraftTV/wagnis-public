@@ -79,10 +79,70 @@ function checkTarget(
   return null;
 }
 
+interface CombatRun {
+  rolls: RollRecord[];
+  events: GameEvent[];
+  fromArmies: number;
+  toArmies: number;
+  attackerLosses: number;
+  defenderLosses: number;
+  /** Dice of the attacker in the last roll: the least number of armies that move in after a conquest. */
+  lastAttackerDiceCount: number;
+}
+
 /**
- * Fights one combat. `fixedDice` is the attacker's chosen dice for a single roll (`attack`);
- * without it the attacker rolls with the maximum until the territory falls or only 1 army is left (`blitz`).
- * The caller has validated everything, so this always makes progress.
+ * Rolls one combat. `fixedDice` is the attacker's chosen dice for a single roll (`attack`); without it the attacker
+ * rolls with the maximum until the territory falls or only 1 army is left (`blitz`).
+ */
+function rollCombat(
+  state: GameState,
+  playerId: PlayerId,
+  fromId: TerritoryId,
+  toId: TerritoryId,
+  fixedDice: number | undefined,
+  rng: Rng,
+): CombatRun {
+  const defenderId = state.territories[toId]!.ownerId;
+  const run: CombatRun = {
+    rolls: [],
+    events: [],
+    fromArmies: state.territories[fromId]!.armies,
+    toArmies: state.territories[toId]!.armies,
+    attackerLosses: 0,
+    defenderLosses: 0,
+    lastAttackerDiceCount: 0,
+  };
+  // Every roll costs at least one army, so the loop ends after at most fromArmies + toArmies rolls;
+  // the counter is only a safety net.
+  for (let guard = run.fromArmies + run.toArmies; guard > 0; guard--) {
+    const attackerDiceCount = fixedDice ?? maxDiceFor(run.fromArmies);
+    const attackerDice = rollDice(rng, attackerDiceCount);
+    const defenderDice = rollDice(rng, run.toArmies >= 2 ? 2 : 1);
+    const outcome = resolveRoll(attackerDice, defenderDice);
+    run.fromArmies -= outcome.attackerLosses;
+    run.toArmies -= outcome.defenderLosses;
+    run.attackerLosses += outcome.attackerLosses;
+    run.defenderLosses += outcome.defenderLosses;
+    run.lastAttackerDiceCount = attackerDiceCount;
+    run.rolls.push({ attackerDice, defenderDice, ...outcome });
+    run.events.push({
+      type: "attackRolled",
+      playerId,
+      defenderId,
+      from: fromId,
+      to: toId,
+      attackerDice,
+      defenderDice,
+      ...outcome,
+    });
+    if (fixedDice !== undefined || run.toArmies === 0 || run.fromArmies <= 1) break;
+  }
+  return run;
+}
+
+/**
+ * Fights one combat (see `rollCombat`): writes the armies and the combat record, and on a conquest takes the
+ * territory. The caller has validated everything, so this always makes progress.
  */
 function fight(
   state: GameState,
@@ -93,50 +153,16 @@ function fight(
   rng: Rng,
 ): ActionResult {
   const defenderId = state.territories[toId]!.ownerId;
-  let fromArmies = state.territories[fromId]!.armies;
-  let toArmies = state.territories[toId]!.armies;
-  const events: GameEvent[] = [];
-  const rolls: RollRecord[] = [];
-  let attackerLosses = 0;
-  let defenderLosses = 0;
-  let lastAttackerDiceCount = 0;
-
-  // Every roll costs at least one army, so the loop ends after at most fromArmies + toArmies rolls;
-  // the counter is only a safety net.
-  for (let guard = fromArmies + toArmies; guard > 0; guard--) {
-    const attackerDiceCount = fixedDice ?? maxDiceFor(fromArmies);
-    const attackerDice = rollDice(rng, attackerDiceCount);
-    const defenderDice = rollDice(rng, toArmies >= 2 ? 2 : 1);
-    const outcome = resolveRoll(attackerDice, defenderDice);
-    fromArmies -= outcome.attackerLosses;
-    toArmies -= outcome.defenderLosses;
-    attackerLosses += outcome.attackerLosses;
-    defenderLosses += outcome.defenderLosses;
-    lastAttackerDiceCount = attackerDiceCount;
-    rolls.push({ attackerDice, defenderDice, ...outcome });
-    events.push({
-      type: "attackRolled",
-      playerId,
-      defenderId,
-      from: fromId,
-      to: toId,
-      attackerDice,
-      defenderDice,
-      ...outcome,
-    });
-    if (fixedDice !== undefined || toArmies === 0 || fromArmies <= 1) break;
-  }
-
-  const conquered = toArmies === 0;
+  const run = rollCombat(state, playerId, fromId, toId, fixedDice, rng);
+  const conquered = run.toArmies === 0;
   const seq = state.combatSeq + 1;
-  const territories = {
-    ...state.territories,
-    [fromId]: { ...state.territories[fromId]!, armies: fromArmies },
-    [toId]: { ...state.territories[toId]!, armies: toArmies },
-  };
-  let next: GameState = {
+  const next: GameState = {
     ...state,
-    territories,
+    territories: {
+      ...state.territories,
+      [fromId]: { ...state.territories[fromId]!, armies: run.fromArmies },
+      [toId]: { ...state.territories[toId]!, armies: run.toArmies },
+    },
     combatSeq: seq,
     lastCombat: {
       seq,
@@ -144,66 +170,96 @@ function fight(
       defenderId,
       from: fromId,
       to: toId,
-      rolls: rolls.slice(-MAX_COMBAT_ROLLS),
-      summary: { rollCount: rolls.length, attackerLosses, defenderLosses, conquered },
+      rolls: run.rolls.slice(-MAX_COMBAT_ROLLS),
+      summary: {
+        rollCount: run.rolls.length,
+        attackerLosses: run.attackerLosses,
+        defenderLosses: run.defenderLosses,
+        conquered,
+      },
     },
   };
+  if (!conquered) return { ok: true, state: next, events: run.events };
+  return conquer(state, next, playerId, fromId, toId, run.lastAttackerDiceCount, run.events);
+}
 
-  if (conquered) {
-    // The attacker loses nothing in the winning roll, so fromArmies > lastAttackerDiceCount.
-    const min = lastAttackerDiceCount;
-    next = {
-      ...next,
-      conqueredThisTurn: true,
-      conquestsThisTurn: state.conquestsThisTurn + 1,
-      territories: {
-        ...territories,
-        [fromId]: { ...territories[fromId]!, armies: fromArmies - min },
-        [toId]: { ownerId: playerId, armies: min },
-      },
-    };
-    events.push(
-      { type: "territoryConquered", playerId, previousOwnerId: defenderId, from: fromId, to: toId },
-      { type: "armiesMoved", playerId, from: fromId, to: toId, count: min },
-    );
-    if (defenderId !== null && isEliminated(next, defenderId)) {
-      events.push({ type: "playerEliminated", playerId: defenderId, byPlayerId: playerId });
-      // The conqueror takes the whole hand. No instant trade (rules.md 6): the mandatory trade applies
-      // in the conqueror's next reinforce phase. This also happens when the elimination ends the game.
-      // In a team game the hand goes to the next team mate still in the game, in turn order, instead (rules.md 13,
-      // question 59); if the whole team is out, the conqueror takes it as usual.
-      const taker = handTaker(next, defenderId, playerId);
-      const taken = next.secret.hand[defenderId] ?? [];
-      if (taken.length > 0) {
-        next = {
-          ...next,
-          secret: {
-            ...next.secret,
-            hand: {
-              ...next.secret.hand,
-              [taker]: [...(next.secret.hand[taker] ?? []), ...taken],
-              [defenderId]: [],
-            },
-          },
-        };
-        events.push({
-          type: "cardsTaken",
-          playerId: taker,
-          fromPlayerId: defenderId,
-          count: taken.length,
-        });
-      }
-      // Missions of the other players that targeted the eliminated player become the fallback, silently:
-      // no event and no public field (rules.md 1.2). The conqueror's own mission is not touched.
-      next = replaceTargetMissions(next, defenderId, playerId);
-    }
-    if (next.territories[fromId]!.armies > 1) {
-      // The attacker keeps armies beyond the 1 that stays: a move-in choice is open. `checkVictory` (in
-      // `applyAction`) clears it again if this conquest wins the game.
-      next = { ...next, pendingOccupation: { from: fromId, to: toId, min } };
-    }
+/**
+ * The attacker takes the territory with `min` armies (the dice of the winning roll); an eliminated defender hands
+ * over the cards, and a move-in choice opens if armies are left beyond the 1 that stays.
+ */
+function conquer(
+  before: GameState,
+  fought: GameState,
+  playerId: PlayerId,
+  fromId: TerritoryId,
+  toId: TerritoryId,
+  min: number,
+  events: GameEvent[],
+): ActionResult {
+  const defenderId = before.territories[toId]!.ownerId;
+  const territories = fought.territories;
+  // The attacker loses nothing in the winning roll, so the attacking territory has more than `min` armies.
+  let next: GameState = {
+    ...fought,
+    conqueredThisTurn: true,
+    conquestsThisTurn: before.conquestsThisTurn + 1,
+    territories: {
+      ...territories,
+      [fromId]: { ...territories[fromId]!, armies: territories[fromId]!.armies - min },
+      [toId]: { ownerId: playerId, armies: min },
+    },
+  };
+  events.push(
+    { type: "territoryConquered", playerId, previousOwnerId: defenderId, from: fromId, to: toId },
+    { type: "armiesMoved", playerId, from: fromId, to: toId, count: min },
+  );
+  if (defenderId !== null && isEliminated(next, defenderId)) {
+    events.push({ type: "playerEliminated", playerId: defenderId, byPlayerId: playerId });
+    next = handOverHand(next, defenderId, playerId, events);
+    // Missions of the other players that targeted the eliminated player become the fallback, silently:
+    // no event and no public field (rules.md 1.2). The conqueror's own mission is not touched.
+    next = replaceTargetMissions(next, defenderId, playerId);
+  }
+  if (next.territories[fromId]!.armies > 1) {
+    // The attacker keeps armies beyond the 1 that stays: a move-in choice is open. `checkVictory` (in
+    // `applyAction`) clears it again if this conquest wins the game.
+    next = { ...next, pendingOccupation: { from: fromId, to: toId, min } };
   }
   return { ok: true, state: next, events };
+}
+
+/**
+ * The conqueror takes the whole hand of the eliminated player. No instant trade (rules.md 6): the mandatory trade
+ * applies in the conqueror's next reinforce phase. This also happens when the elimination ends the game. In a team
+ * game the hand goes to the next team mate still in the game, in turn order, instead (rules.md 13, question 59); if
+ * the whole team is out, the conqueror takes it as usual.
+ */
+function handOverHand(
+  state: GameState,
+  eliminatedId: PlayerId,
+  conquerorId: PlayerId,
+  events: GameEvent[],
+): GameState {
+  const taker = handTaker(state, eliminatedId, conquerorId);
+  const taken = state.secret.hand[eliminatedId] ?? [];
+  if (taken.length === 0) return state;
+  events.push({
+    type: "cardsTaken",
+    playerId: taker,
+    fromPlayerId: eliminatedId,
+    count: taken.length,
+  });
+  return {
+    ...state,
+    secret: {
+      ...state.secret,
+      hand: {
+        ...state.secret.hand,
+        [taker]: [...(state.secret.hand[taker] ?? []), ...taken],
+        [eliminatedId]: [],
+      },
+    },
+  };
 }
 
 export function applyAttack(

@@ -2,6 +2,7 @@
   import { formatRoomId } from "@wagnis/shared";
   import type { RoomView } from "@wagnis/shared";
   import type { GameConnection } from "../lib/connection.svelte.js";
+  import ChoiceGroup from "../components/ChoiceGroup.svelte";
   import HostMenu from "../components/HostMenu.svelte";
   import QrCode from "../components/QrCode.svelte";
   import { randomTeamsMessage, settingsMessage, teamMessage } from "../lib/host.js";
@@ -39,6 +40,11 @@
 
   const modes = ["missions", "domination"] as const;
   const moveChoices = [1, 2] as const;
+  /** A switch as two buttons: off first, then on. */
+  const onOff = (off: string, on: string) => [
+    { value: false, label: off },
+    { value: true, label: on },
+  ];
   // testland is offered in a development build only
   const maps = mapOptions(import.meta.env.DEV);
 
@@ -105,71 +111,53 @@
     <!-- The choice always shows the last snapshot: no local anticipation. -->
     <section aria-label="Siegmodus">
       <h2>Siegmodus</h2>
-      <div class="seg" role="group" aria-label="Siegmodus">
-        {#each modes as m (m)}
-          <button
-            class:secondary={view.victoryMode !== m}
-            aria-pressed={view.victoryMode === m}
-            onclick={() => conn.sendHost(settingsMessage({ victoryMode: m }))}
-            >{modeLabel(m)}</button
-          >
-        {/each}
-      </div>
-      <p class="muted">{modeHint(view.victoryMode)}</p>
+      <ChoiceGroup
+        label="Siegmodus"
+        options={modes.map((m) => ({ value: m, label: modeLabel(m) }))}
+        selected={view.victoryMode}
+        hint={modeHint(view.victoryMode)}
+        onpick={(m) => conn.sendHost(settingsMessage({ victoryMode: m }))}
+      />
     </section>
     <section aria-label="Karte">
       <h2>Karte</h2>
-      <div class="seg" role="group" aria-label="Karte">
-        {#each maps as m (m.id)}
-          <button
-            class:secondary={view.mapId !== m.id}
-            aria-pressed={view.mapId === m.id}
-            onclick={() => conn.sendHost(settingsMessage({ mapId: m.id }))}>{m.label}</button
-          >
-        {/each}
-      </div>
-      <p class="muted">{mapLabel(view.mapId)}</p>
+      <ChoiceGroup
+        label="Karte"
+        options={maps.map((m) => ({ value: m.id, label: m.label }))}
+        selected={view.mapId}
+        hint={mapLabel(view.mapId)}
+        onpick={(id) => conn.sendHost(settingsMessage({ mapId: id }))}
+      />
     </section>
     <section aria-label="Verschiebungen pro Zug">
       <h2>Verschiebungen pro Zug</h2>
-      <div class="seg" role="group" aria-label="Verschiebungen pro Zug">
-        {#each moveChoices as m (m)}
-          <button
-            class:secondary={view.fortifyMoves !== m}
-            aria-pressed={view.fortifyMoves === m}
-            onclick={() => conn.sendHost(settingsMessage({ fortifyMoves: m }))}
-            >{fortifyLabel(m)}</button
-          >
-        {/each}
-      </div>
-      <p class="muted">{fortifyHint(view.fortifyMoves)}</p>
+      <ChoiceGroup
+        label="Verschiebungen pro Zug"
+        options={moveChoices.map((m) => ({ value: m, label: fortifyLabel(m) }))}
+        selected={view.fortifyMoves}
+        hint={fortifyHint(view.fortifyMoves)}
+        onpick={(m) => conn.sendHost(settingsMessage({ fortifyMoves: m }))}
+      />
     </section>
     <section aria-label={roundLimitSectionLabel}>
       <h2>{roundLimitSectionLabel}</h2>
-      <div class="seg" role="group" aria-label={roundLimitSectionLabel}>
-        {#each roundLimitChoices as r (r)}
-          <button
-            class:secondary={view.roundLimit !== r}
-            aria-pressed={view.roundLimit === r}
-            onclick={() => conn.sendHost(settingsMessage({ roundLimit: r }))}
-            >{r === null ? "Aus" : r}</button
-          >
-        {/each}
-      </div>
-      <p class="muted">{roundLimitHint(view.roundLimit)}</p>
+      <ChoiceGroup
+        label={roundLimitSectionLabel}
+        options={roundLimitChoices.map((r) => ({ value: r, label: r === null ? "Aus" : String(r) }))}
+        selected={view.roundLimit}
+        hint={roundLimitHint(view.roundLimit)}
+        onpick={(r) => conn.sendHost(settingsMessage({ roundLimit: r }))}
+      />
     </section>
     <section aria-label={teamsSectionLabel}>
       <h2>{teamsSectionLabel}</h2>
-      <div class="seg" role="group" aria-label={teamsSectionLabel}>
-        {#each teamModeChoices as m (m)}
-          <button
-            class:secondary={view.teams !== m}
-            aria-pressed={view.teams === m}
-            onclick={() => conn.sendHost(settingsMessage({ teams: m }))}>{teamModeButton(m)}</button
-          >
-        {/each}
-      </div>
-      <p class="muted">{teamModeHint(view.teams)}</p>
+      <ChoiceGroup
+        label={teamsSectionLabel}
+        options={teamModeChoices.map((m) => ({ value: m, label: teamModeButton(m) }))}
+        selected={view.teams}
+        hint={teamModeHint(view.teams)}
+        onpick={(m) => conn.sendHost(settingsMessage({ teams: m }))}
+      />
       {#if view.teams !== null}
         <p>
           <button class="secondary" onclick={() => conn.sendHost(randomTeamsMessage())}>
@@ -181,51 +169,31 @@
     </section>
     <section aria-label={worldEventsLabel}>
       <h2>{worldEventsLabel}</h2>
-      <div class="seg" role="group" aria-label={worldEventsLabel}>
-        <button
-          class:secondary={view.worldEvents}
-          aria-pressed={!view.worldEvents}
-          onclick={() => conn.sendHost(settingsMessage({ worldEvents: false }))}>Aus</button
-        >
-        <button
-          class:secondary={!view.worldEvents}
-          aria-pressed={view.worldEvents}
-          onclick={() => conn.sendHost(settingsMessage({ worldEvents: true }))}>An</button
-        >
-      </div>
-      <p class="muted">{worldEventsHint(view.worldEvents)}</p>
+      <ChoiceGroup
+        label={worldEventsLabel}
+        options={onOff("Aus", "An")}
+        selected={view.worldEvents}
+        hint={worldEventsHint(view.worldEvents)}
+        onpick={(on) => conn.sendHost(settingsMessage({ worldEvents: on }))}
+      />
     </section>
     {#if view.victoryMode === "missions"}
       <section aria-label="Missions-Optionen">
         <h2>Missionen</h2>
-        <div class="seg" role="group" aria-label={missionDraftLabel}>
-          <button
-            class:secondary={view.missionDraft}
-            aria-pressed={!view.missionDraft}
-            onclick={() => conn.sendHost(settingsMessage({ missionDraft: false }))}>Eine Mission</button
-          >
-          <button
-            class:secondary={!view.missionDraft}
-            aria-pressed={view.missionDraft}
-            onclick={() => conn.sendHost(settingsMessage({ missionDraft: true }))}
-            >{missionDraftLabel}</button
-          >
-        </div>
-        <p class="muted">{missionDraftHint(view.missionDraft)}</p>
-        <div class="seg" role="group" aria-label={holdToWinLabel}>
-          <button
-            class:secondary={view.holdToWin}
-            aria-pressed={!view.holdToWin}
-            onclick={() => conn.sendHost(settingsMessage({ holdToWin: false }))}>Sofortiger Sieg</button
-          >
-          <button
-            class:secondary={!view.holdToWin}
-            aria-pressed={view.holdToWin}
-            onclick={() => conn.sendHost(settingsMessage({ holdToWin: true }))}
-            >{holdToWinLabel}</button
-          >
-        </div>
-        <p class="muted">{holdToWinHint(view.holdToWin)}</p>
+        <ChoiceGroup
+          label={missionDraftLabel}
+          options={onOff("Eine Mission", missionDraftLabel)}
+          selected={view.missionDraft}
+          hint={missionDraftHint(view.missionDraft)}
+          onpick={(on) => conn.sendHost(settingsMessage({ missionDraft: on }))}
+        />
+        <ChoiceGroup
+          label={holdToWinLabel}
+          options={onOff("Sofortiger Sieg", holdToWinLabel)}
+          selected={view.holdToWin}
+          hint={holdToWinHint(view.holdToWin)}
+          onpick={(on) => conn.sendHost(settingsMessage({ holdToWin: on }))}
+        />
       </section>
     {/if}
   {:else}
@@ -380,11 +348,6 @@
   }
   .muted {
     color: var(--muted);
-  }
-  .seg {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
   }
   .ok {
     color: var(--ok);

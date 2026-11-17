@@ -134,7 +134,41 @@ export function removeSpikes(ring: readonly string[]): string[] {
 }
 
 export function buildTerritories(regions: readonly RegionInput[], opts: BuildOptions): BuildResult {
-  // 1. Directed edges per territory with cancellation of inner borders.
+  const owner = outerEdges(regions);
+  const outgoing = outgoingByRegion(owner);
+  const simplifyArc = arcSimplifier(opts);
+  const result: Record<string, Pt[][]> = {};
+  const contacts = new Map<string, number>();
+  let dropped = 0;
+  for (const region of regions) {
+    const rings: Pt[][] = [];
+    for (const ring of chainRings(outgoing.get(region.id) ?? new Map<string, string[]>())) {
+      // 3. Label every edge with the neighbour on the other side, cut into arcs where it changes.
+      const label = (i: number): string =>
+        owner.get(`${ring[(i + 1) % ring.length]!}>${ring[i]!}`) ?? "";
+      const pts: Pt[] = [];
+      for (const run of arcRuns(ring, label)) {
+        const arc = simplifyArc(run.nodes);
+        pts.push(...arc.slice(0, -1));
+        if (run.other !== "" && region.id < run.other) {
+          const pair = `${region.id}|${run.other}`;
+          contacts.set(pair, (contacts.get(pair) ?? 0) + lineLength(arc));
+        }
+      }
+      if (pts.length < 3) dropped++;
+      else rings.push(pts);
+    }
+    rings.sort((a, b) => Math.abs(ringArea(b)) - Math.abs(ringArea(a)));
+    result[region.id] = rings;
+  }
+  return { rings: result, contacts, dropped };
+}
+
+/**
+ * 1. Directed edges per territory with cancellation of inner borders. Returns the outer edges "a>b" with the
+ * territory they belong to.
+ */
+function outerEdges(regions: readonly RegionInput[]): Map<string, string> {
   const prepared: { id: string; keys: string[] }[] = [];
   for (const region of regions) {
     for (const raw of region.rings) {
@@ -160,22 +194,93 @@ export function buildTerritories(regions: readonly RegionInput[], opts: BuildOpt
   });
   const owner = new Map<string, string>(); // "a>b" -> region id (outer edge)
   for (const [id, own] of ownEdges) for (const e of own) owner.set(e, id);
+  return owner;
+}
 
-  // 2. Chain edges into rings per territory.
-  const outgoing = new Map<string, Map<string, string[]>>(); // region -> node -> targets
+/** 2. The outer edges as region -> node -> targets, for chaining them into rings. */
+function outgoingByRegion(owner: Map<string, string>): Map<string, Map<string, string[]>> {
+  const outgoing = new Map<string, Map<string, string[]>>();
   for (const [e, id] of owner) {
     const [a, b] = e.split(">") as [string, string];
     const nodes = outgoing.get(id) ?? new Map<string, string[]>();
     outgoing.set(id, nodes);
     nodes.set(a, [...(nodes.get(a) ?? []), b]);
   }
+  return outgoing;
+}
 
+/** Chains a region's edges into rings (start nodes sorted); uses the edges up. Rings under 3 nodes are skipped. */
+function* chainRings(nodes: Map<string, string[]>): Generator<string[]> {
+  const starts = [...nodes.keys()].sort();
+  for (const start of starts) {
+    while ((nodes.get(start)?.length ?? 0) > 0) {
+      const ring: string[] = [start];
+      let cur = start;
+      for (;;) {
+        const next = nodes.get(cur)?.pop();
+        if (next === undefined) break;
+        if (next === start) break;
+        ring.push(next);
+        cur = next;
+      }
+      if (ring.length < 3) continue;
+      yield ring;
+    }
+  }
+}
+
+/**
+ * Cuts a ring into runs of edges with the same neighbour (`label`). A ring with one neighbour all round (island,
+ * enclave) is cut into two halves, so the arcs are open.
+ */
+function arcRuns(
+  ring: readonly string[],
+  label: (i: number) => string,
+): { other: string; nodes: string[] }[] {
+  const k = ring.length;
+  let first = 0;
+  for (let i = 0; i < k; i++) {
+    if (label(i) !== label((i + k - 1) % k)) {
+      first = i;
+      break;
+    }
+  }
+  const runs: { other: string; nodes: string[] }[] = [];
+  let runStart = first;
+  for (let n = 1; n <= k; n++) {
+    const i = (first + n) % k;
+    if (n === k || label(i) !== label(runStart)) {
+      const seq: string[] = [];
+      for (let j = runStart; j !== i || seq.length === 0; j = (j + 1) % k) {
+        seq.push(ring[j]!);
+        if (seq.length > k) break;
+      }
+      seq.push(ring[i]!);
+      runs.push({ other: label(runStart), nodes: seq });
+      runStart = i;
+    }
+  }
+  if (runs.length !== 1) return runs;
+  const lo = ring.reduce((m, key, i) => (key < ring[m]! ? i : m), 0);
+  const rot = [...ring.slice(lo), ...ring.slice(0, lo)];
+  const mid = Math.floor(rot.length / 2);
+  return [
+    { other: label(0), nodes: rot.slice(0, mid + 1) },
+    { other: label(0), nodes: [...rot.slice(mid), rot[0]!] },
+  ];
+}
+
+/**
+ * Projects and simplifies an arc once, in a canonical direction (the smaller end node first), and gives it back in
+ * the asked direction: both neighbours get exactly the same points.
+ */
+function arcSimplifier(opts: BuildOptions): (nodes: string[]) => Pt[] {
   const cache = new Map<string, Pt[]>(); // canonical arc key -> simplified points (projected)
   const projectKey = (k: string): Pt => {
     const [lon, lat] = parseKey(k);
     return opts.project(lon, lat);
   };
-  const simplifyArc = (nodes: string[]): Pt[] => {
+  return (nodes) => {
     const forward = nodes[0]! < nodes[nodes.length - 1]!;
     const canon = forward ? nodes : [...nodes].reverse();
     const key = canon.join(";");
@@ -187,89 +292,14 @@ export function buildTerritories(regions: readonly RegionInput[], opts: BuildOpt
     }
     return forward ? pts : [...pts].reverse();
   };
-
-  const result: Record<string, Pt[][]> = {};
-  const contacts = new Map<string, number>();
-  let dropped = 0;
-  const length = (pts: readonly Pt[]) => {
-    let s = 0;
-    for (let i = 1; i < pts.length; i++)
-      s += Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]);
-    return s;
-  };
-
-  for (const region of regions) {
-    const nodes = outgoing.get(region.id) ?? new Map<string, string[]>();
-    const rings: Pt[][] = [];
-    const starts = [...nodes.keys()].sort();
-    for (const start of starts) {
-      while ((nodes.get(start)?.length ?? 0) > 0) {
-        const ring: string[] = [start];
-        let cur = start;
-        for (;;) {
-          const next = nodes.get(cur)?.pop();
-          if (next === undefined) break;
-          if (next === start) break;
-          ring.push(next);
-          cur = next;
-        }
-        if (ring.length < 3) continue;
-        // 3. Label every edge with the neighbour on the other side, cut into arcs where it changes.
-        const k = ring.length;
-        const label = (i: number): string => owner.get(`${ring[(i + 1) % k]!}>${ring[i]!}`) ?? "";
-        let first = 0;
-        for (let i = 0; i < k; i++) {
-          if (label(i) !== label((i + k - 1) % k)) {
-            first = i;
-            break;
-          }
-        }
-        const runs: { other: string; nodes: string[] }[] = [];
-        let runStart = first;
-        for (let n = 1; n <= k; n++) {
-          const i = (first + n) % k;
-          if (n === k || label(i) !== label(runStart)) {
-            const seq: string[] = [];
-            for (let j = runStart; j !== i || seq.length === 0; j = (j + 1) % k) {
-              seq.push(ring[j]!);
-              if (seq.length > k) break;
-            }
-            seq.push(ring[i]!);
-            runs.push({ other: label(runStart), nodes: seq });
-            runStart = i;
-          }
-        }
-        if (runs.length === 1) {
-          // Whole ring has one neighbour (island, enclave): cut it in two halves so the arcs are open.
-          const seq = runs[0]!.nodes;
-          seq.pop();
-          const lo = ring.reduce((m, key, i) => (key < ring[m]! ? i : m), 0);
-          const rot = [...ring.slice(lo), ...ring.slice(0, lo)];
-          const mid = Math.floor(rot.length / 2);
-          runs.length = 0;
-          runs.push(
-            { other: label(0), nodes: rot.slice(0, mid + 1) },
-            { other: label(0), nodes: [...rot.slice(mid), rot[0]!] },
-          );
-        }
-        const pts: Pt[] = [];
-        for (const run of runs) {
-          const arc = simplifyArc(run.nodes);
-          pts.push(...arc.slice(0, -1));
-          if (run.other !== "" && region.id < run.other) {
-            const pair = `${region.id}|${run.other}`;
-            contacts.set(pair, (contacts.get(pair) ?? 0) + length(arc));
-          }
-        }
-        if (pts.length < 3) dropped++;
-        else rings.push(pts);
-      }
-    }
-    rings.sort((a, b) => Math.abs(ringArea(b)) - Math.abs(ringArea(a)));
-    result[region.id] = rings;
-  }
-  return { rings: result, contacts, dropped };
 }
+
+const lineLength = (pts: readonly Pt[]): number => {
+  let s = 0;
+  for (let i = 1; i < pts.length; i++)
+    s += Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]);
+  return s;
+};
 
 export const vertexCount = (rings: readonly (readonly Ring[])[]): number =>
   rings.reduce((s, r) => s + r.reduce((t, ring) => t + ring.length, 0), 0);

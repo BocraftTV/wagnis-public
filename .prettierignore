@@ -8,3 +8,4 @@ package-lock.json
 .render-tmp
 docs/plans/006-stilprobe
 apps/client/src/maps/welt.shapes.ts
+apps/client/src/golden/views.json

@@ -15,7 +15,7 @@
     LABEL_FONT_PX,
     LABEL_LINE_PX,
   } from "../lib/label.js";
-  import { GestureTracker, isDoubleTap, keyAction, wheelFactor } from "../lib/gestures.js";
+  import { attachMapInput } from "../lib/map-input.js";
   import {
     clamp,
     DEFAULT_LIMITS,
@@ -26,7 +26,7 @@
     refit,
     zoomAt,
   } from "../lib/viewport.js";
-  import type { Point, PointerSample, Size, Viewport } from "../lib/viewport.js";
+  import type { Point, Size, Viewport } from "../lib/viewport.js";
   import MapBackdrop from "./MapBackdrop.svelte";
   import MapControls from "./MapControls.svelte";
   import MapDefs from "./MapDefs.svelte";
@@ -143,92 +143,19 @@
   const canZoomIn = $derived(s < fit * DEFAULT_LIMITS.maxZoom - 1e-9);
   const canZoomOut = $derived(s > fit + 1e-9);
 
-  const tracker = new GestureTracker((v) => limit(v));
-  let lastSeaTap: PointerSample | null = null;
-
-  // Pointer events for touch, pen and mouse. The map has `touch-action: none`, so Safari neither scrolls nor zooms
-  // the page there; pointer capture starts only once a drag begins, so taps stay ordinary clicks.
+  // Pointer, wheel, keys and clicks (lib/map-input.ts); the map has `touch-action: none`.
   $effect(() => {
     const el = stage;
     if (!el) return;
-    const local = (e: PointerEvent | WheelEvent): Point => {
-      const r = el.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
-    };
-    const sample = (e: PointerEvent): PointerSample => ({ ...local(e), t: e.timeStamp });
-    const captured = new Set<number>();
-    const down = (e: PointerEvent) => {
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-      tracker.down(e.pointerId, sample(e), current());
-    };
-    const move = (e: PointerEvent) => {
-      const r = tracker.move(e.pointerId, local(e));
-      if (!r) return;
-      if (!captured.has(e.pointerId)) {
-        captured.add(e.pointerId);
-        try {
-          el.setPointerCapture(e.pointerId);
-        } catch {
-          // The pointer is gone already; the drag ends with its up event.
-        }
-      }
-      show(r.viewport);
-    };
-    const up = (e: PointerEvent) => {
-      captured.delete(e.pointerId);
-      const smp = sample(e);
-      const { tap } = tracker.up(e.pointerId, smp, current());
-      // A tap on open sea (no territory under it) is half of a double tap.
-      if (!tap || (e.target as Element).closest("[data-tid]")) return;
-      if (isDoubleTap(lastSeaTap, smp)) {
-        lastSeaTap = null;
-        show(doubleTap(current(), smp, size, layout.viewBox));
-      } else lastSeaTap = smp;
-    };
-    const cancel = (e: PointerEvent) => {
-      captured.delete(e.pointerId);
-      tracker.up(e.pointerId, { ...sample(e), t: Number.POSITIVE_INFINITY }, current());
-    };
-    const wheel = (e: WheelEvent) => {
-      e.preventDefault();
-      zoomBy(wheelFactor(e.deltaY, e.ctrlKey), local(e));
-    };
-    // Safari's own pinch events: without this the page itself zooms.
-    const stop = (e: Event) => e.preventDefault();
-    const key = (e: KeyboardEvent) => {
-      if (e.target !== el) return;
-      const a = keyAction(e.key);
-      if (!a) return;
-      e.preventDefault();
-      if (a.kind === "zoom") zoomBy(a.factor);
-      else if (a.kind === "fit") fitView();
-      else show(limit({ ...current(), tx: current().tx + a.dx, ty: current().ty + a.dy }));
-    };
-    const click = (e: MouseEvent) => {
-      if (tracker.suppressClick) return;
-      const id = (e.target as Element).closest("[data-tid]")?.getAttribute("data-tid");
-      if (id) tapped(id);
-    };
-    el.addEventListener("pointerdown", down);
-    el.addEventListener("pointermove", move);
-    el.addEventListener("pointerup", up);
-    el.addEventListener("pointercancel", cancel);
-    el.addEventListener("wheel", wheel, { passive: false });
-    el.addEventListener("keydown", key);
-    el.addEventListener("click", click);
-    for (const t of ["gesturestart", "gesturechange", "gestureend"]) {
-      el.addEventListener(t, stop, { passive: false });
-    }
-    return () => {
-      el.removeEventListener("pointerdown", down);
-      el.removeEventListener("pointermove", move);
-      el.removeEventListener("pointerup", up);
-      el.removeEventListener("pointercancel", cancel);
-      el.removeEventListener("wheel", wheel);
-      el.removeEventListener("keydown", key);
-      el.removeEventListener("click", click);
-      for (const t of ["gesturestart", "gesturechange", "gestureend"]) el.removeEventListener(t, stop);
-    };
+    return attachMapInput(el, {
+      current,
+      show,
+      limit,
+      zoomBy,
+      fit: fitView,
+      doubleTap: (cur, smp) => doubleTap(cur, smp, size, layout.viewBox),
+      tapped,
+    });
   });
 </script>
 
